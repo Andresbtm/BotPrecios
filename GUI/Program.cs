@@ -84,59 +84,112 @@ namespace GUI
 
                 Console.WriteLine($"[{usuario}] botón: {data}"); // 👈 log en consola
 
-                await bot.AnswerCallbackQuery(query.Id, cancellationToken: ct);
+                await bot.AnswerCallbackQuery(
+                    callbackQueryId: query.Id,
+                    cancellationToken: ct
+                );
 
-                string texto = "";
-                InlineKeyboardMarkup teclado = null;
-                bool esProducto = false;
-
-                // ── Categorías ───────────────────────────────────────
+                // ── Categorías (edita el mensaje actual) ─────────────
                 if (data == "cat_granos" || data == "cat_aceites" || data == "cat_carnes")
                 {
                     var cat = data.Replace("cat_", "");
                     var info = _servicioProducto.ObtenerDatosCategoria(cat);
-                    texto = _servicioProducto.ObtenerMenuCategoria(cat, info.emoji, info.titulo);
-                    teclado = _servicioProducto.ObtenerInlineProductos(cat);
+
+                    await bot.EditMessageText(
+                        chatId: chatId,
+                        messageId: messageId,
+                        text: _servicioProducto.ObtenerMenuCategoria(cat, info.emoji, info.titulo),
+                        parseMode: ParseMode.Markdown,
+                        replyMarkup: _servicioProducto.ObtenerInlineProductos(cat),
+                        cancellationToken: ct
+                    );
                 }
-                // ── Volver al menú principal ─────────────────────────
-                else if (data == "menu_principal")
-                {
-                    texto = "📦 *Elige una categoría:*";
-                    teclado = _servicioProducto.ObtenerInlineCategorias();
-                }
-                // ── Volver a categoría ───────────────────────────────
-                else if (data.StartsWith("volver_"))
-                {
-                    var cat = data.Replace("volver_", "");
-                    var info = _servicioProducto.ObtenerDatosCategoria(cat);
-                    texto = _servicioProducto.ObtenerMenuCategoria(cat, info.emoji, info.titulo);
-                    teclado = _servicioProducto.ObtenerInlineProductos(cat);
-                }
-                // ── Producto final ───────────────────────────────────
+                // ── Producto (edita con info, envía nuevo con supermercado) ──
                 else if (data.StartsWith("prod_"))
                 {
-                    var comando = data.Replace("prod_", "/");
-                    var cat = _servicioProducto.ObtenerCategoriaPorComando("/" + data.Replace("prod_", ""));
-                    texto = _servicioProducto.ObtenerInfoProducto("/" + data.Replace("prod_", ""));
-                    teclado = _servicioProducto.ObtenerInlineProductoFinal(cat);
-                    esProducto = true;
-                }
+                    var comando = "/" + data.Replace("prod_", "");
+                    var cat = _servicioProducto.ObtenerCategoriaPorComando(comando);
+                    var infoProducto = _servicioProducto.ObtenerInfoProducto(comando);
+                    var tecladoVolver = _servicioProducto.ObtenerInlineProductoFinal(cat);
 
-                // Editar el mismo mensaje
-                await bot.EditMessageText(
-                    chatId: chatId,
-                    messageId: messageId,
-                    text: texto,
-                    parseMode: ParseMode.Markdown,
-                    replyMarkup: teclado,
-                    cancellationToken: ct
-                );
+                    // Edita el mensaje de la categoría con la info del producto
+                    await bot.EditMessageText(
+                        chatId: chatId,
+                        messageId: messageId,
+                        text: infoProducto,
+                        parseMode: ParseMode.Markdown,
+                        replyMarkup: null,
+                        cancellationToken: ct
+                    );
 
-                if (esProducto)
-                {
+                    // Envía nuevo mensaje con supermercado + botones
                     await bot.SendMessage(
                         chatId: chatId,
                         text: "🏪 En este supermercado están los mejores precios: (próximamente)",
+                        replyMarkup: tecladoVolver,
+                        cancellationToken: ct
+                    );
+                }
+                // ── Volver a categoría desde lista de productos (edita) ──
+                else if (data.StartsWith("volver_cat_"))
+                {
+                    var cat = data.Replace("volver_cat_", "");
+                    var info = _servicioProducto.ObtenerDatosCategoria(cat);
+
+                    try
+                    {
+                        await bot.EditMessageText(
+                            chatId: chatId,
+                            messageId: messageId,
+                            text: _servicioProducto.ObtenerMenuCategoria(cat, info.emoji, info.titulo),
+                            parseMode: ParseMode.Markdown,
+                            replyMarkup: _servicioProducto.ObtenerInlineProductos(cat),
+                            cancellationToken: ct
+                        );
+                    }
+                    catch (ApiRequestException ex) when (ex.Message.Contains("message is not modified"))
+                    {
+                        // El mensaje ya tiene ese contenido, no hay nada que editar
+                    }
+                }
+                // ── Volver a categoría desde supermercado (envía nuevo) ──
+                else if (data.StartsWith("volver_prod_"))
+                {
+                    var cat = data.Replace("volver_prod_", "");
+                    var info = _servicioProducto.ObtenerDatosCategoria(cat);
+
+                    await bot.SendMessage(
+                        chatId: chatId,
+                        text: _servicioProducto.ObtenerMenuCategoria(cat, info.emoji, info.titulo),
+                        parseMode: ParseMode.Markdown,
+                        replyMarkup: _servicioProducto.ObtenerInlineProductos(cat),
+                        cancellationToken: ct
+                    );
+                }
+                // ── Menú principal desde categoría (edita el mensaje actual) ──
+                else if (data == "menu_principal")
+                {
+                    try
+                    {
+                        await bot.EditMessageText(
+                            chatId: chatId,
+                            messageId: messageId,
+                            text: "📦 *Elige una categoría:*",
+                            parseMode: ParseMode.Markdown,
+                            replyMarkup: _servicioProducto.ObtenerInlineCategorias(),
+                            cancellationToken: ct
+                        );
+                    }
+                    catch (ApiRequestException ex) when (ex.Message.Contains("message is not modified")) { }
+                }
+                // ── Menú principal desde supermercado (envía nuevo mensaje) ──
+                else if (data == "menu_nuevo")
+                {
+                    await bot.SendMessage(
+                        chatId: chatId,
+                        text: "📦 *Elige una categoría:*",
+                        parseMode: ParseMode.Markdown,
+                        replyMarkup: _servicioProducto.ObtenerInlineCategorias(),
                         cancellationToken: ct
                     );
                 }

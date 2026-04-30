@@ -51,8 +51,6 @@ namespace BLL
             return producto?.Categoria ?? "granos";
         }
 
-        // ── Teclados Inline ──────────────────────────────────────────
-
         // Menú principal de categorías
         public InlineKeyboardMarkup ObtenerInlineCategorias()
         {
@@ -101,7 +99,7 @@ namespace BLL
                 }
             }
 
-            // Botón volver al menú principal
+            // Botón volver edita el mensaje actual
             filas.Add(new[]
             {
                 InlineKeyboardButton.WithCallbackData("🔙 Volver", "menu_principal")
@@ -110,7 +108,7 @@ namespace BLL
             return new InlineKeyboardMarkup(filas);
         }
 
-        // Botones después de ver un producto
+        // Botones después de ver un producto con botón volver_prod_
         public InlineKeyboardMarkup ObtenerInlineProductoFinal(string categoria)
         {
             var info = ObtenerDatosCategoria(categoria);
@@ -120,11 +118,11 @@ namespace BLL
                 {
                     InlineKeyboardButton.WithCallbackData(
                         $"🔙 Volver a {info.titulo}",
-                        $"volver_{categoria}")
+                        $"volver_prod_{categoria}")
                 },
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_principal")
+                    InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
                 }
             });
         }

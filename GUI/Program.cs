@@ -34,6 +34,9 @@ namespace GUI
                 cancellationToken: cts.Token
             );
 
+            var prueba = new ServicioPruebaConexion();
+            Console.WriteLine(prueba.Probar());
+
             Console.WriteLine("¡Bot Conectado! Presiona Enter para detener.");
             Console.ReadLine();
             cts.Cancel();

@@ -48,7 +48,15 @@ namespace BLL
         public string ObtenerCategoriaPorComando(string comando)
         {
             var producto = _repositorio.ObtenerPorComando(comando);
-            return producto?.Categoria ?? "granos";
+            if (producto == null) return "granos";
+
+            switch (producto.IdCategoria)
+            {
+                case 1: return "granos";
+                case 2: return "aceites";
+                case 3: return "carnes";
+                default: return "granos";
+            }
         }
 
         // Menú principal de categorías

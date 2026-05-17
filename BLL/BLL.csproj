@@ -102,7 +102,6 @@
   <ItemGroup>
     <Compile Include="ServicioProducto.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServicioPruebaConexion.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DAL\DAL.csproj">

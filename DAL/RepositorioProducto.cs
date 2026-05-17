@@ -1,6 +1,8 @@
 ﻿using ENTITY;
+using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,10 +12,41 @@ namespace DAL
 {
     public class RepositorioProducto
     {
-        public List<Producto> ObtenerPorCategoria(string categoria)
+        private readonly Conexion _conexion = new Conexion();
+
+        public List<Producto> ObtenerPorCategoria(string nombreCategoria)
         {
-            var todos = ObtenerTodos();
-            return todos.FindAll(p => p.Categoria.ToLower() == categoria.ToLower());
+            List<Producto> lista = new List<Producto>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                int l_idCategoria = ObtenerIdCategoria(con, nombreCategoria);
+                if (l_idCategoria == 0) return lista;
+
+                using (OracleCommand cmd = new OracleCommand("PKG_PRODUCTO.PR_LISTAR_POR_CATEGORIA", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add(new OracleParameter("p_id_categoria", OracleDbType.Int32)
+                    {
+                        Value = l_idCategoria
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(MapearProducto(reader));
+                        }
+                    }
+                }
+            }
+
+            return lista;
         }
 
         public Producto ObtenerPorComando(string comando)
@@ -21,27 +54,75 @@ namespace DAL
             return ObtenerTodos().Find(p => p.Comando == comando);
         }
 
-        private List<Producto> ObtenerTodos()
+        public List<Producto> ObtenerTodos()
         {
-            return new List<Producto>
+            List<Producto> lista = new List<Producto>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
             {
-                // Granos
-                new Producto { Id=1, Nombre="Arroz",    Categoria="granos",  Unidad="kg",    Emoji="🌾", Comando="/arroz" },
-                new Producto { Id=2, Nombre="Maíz",     Categoria="granos",  Unidad="kg",    Emoji="🌽", Comando="/maiz" },
-                new Producto { Id=3, Nombre="Frijoles", Categoria="granos",  Unidad="kg",    Emoji="🫘", Comando="/frijoles" },
-                new Producto { Id=4, Nombre="Lentejas", Categoria="granos",  Unidad="kg",    Emoji="🫘", Comando="/lentejas" },
-                new Producto { Id=5, Nombre="Pasta",    Categoria="granos",  Unidad="kg",    Emoji="🍝", Comando="/pasta" },
-                // Aceites
-                new Producto { Id=6, Nombre="Aceite Vegetal", Categoria="aceites", Unidad="litro", Emoji="🫙", Comando="/aceitevegetal" },
-                new Producto { Id=7, Nombre="Aceite de Maíz", Categoria="aceites", Unidad="litro", Emoji="🌽", Comando="/aceitemaiz" },
-                new Producto { Id=8, Nombre="Margarina",      Categoria="aceites", Unidad="kg",    Emoji="🧈", Comando="/margarina" },
-                new Producto { Id=9, Nombre="Mantequilla",    Categoria="aceites", Unidad="kg",    Emoji="🧈", Comando="/mantequilla" },
-                // Carnes
-                new Producto { Id=10, Nombre="Pollo",    Categoria="carnes", Unidad="kg", Emoji="🍗", Comando="/pollo" },
-                new Producto { Id=11, Nombre="Res",      Categoria="carnes", Unidad="kg", Emoji="🥩", Comando="/res" },
-                new Producto { Id=12, Nombre="Cerdo",    Categoria="carnes", Unidad="kg", Emoji="🥓", Comando="/cerdo" },
-                new Producto { Id=13, Nombre="Pescado",  Categoria="carnes", Unidad="kg", Emoji="🐟", Comando="/pescado" },
-                new Producto { Id=14, Nombre="Mortadela",Categoria="carnes", Unidad="kg", Emoji="🌭", Comando="/mortadela" },
+                using (OracleCommand cmd = new OracleCommand("PKG_PRODUCTO.PR_LISTAR_TODOS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(MapearProducto(reader));
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
+
+        private int ObtenerIdCategoria(OracleConnection con, string nombreCategoria)
+        {
+            using (OracleCommand cmd = new OracleCommand("PKG_CATEGORIA.PR_LISTAR_CATEGORIAS", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                {
+                    Direction = ParameterDirection.Output
+                });
+
+                using (OracleDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        if (reader["nombre"].ToString().ToLower() == nombreCategoria.ToLower())
+                            return Convert.ToInt32(reader["id_categoria"]);
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        private Producto MapearProducto(OracleDataReader reader)
+        {
+            string l_nombre = reader["nombre"].ToString();
+
+            return new Producto
+            {
+                Id = Convert.ToInt32(reader["id_producto"]),
+                Nombre = l_nombre,
+                Unidad = reader["unidad"] == DBNull.Value ? "" : reader["unidad"].ToString(),
+                Emoji = reader["emoji"] == DBNull.Value ? "" : reader["emoji"].ToString(),
+                IdCategoria = Convert.ToInt32(reader["id_categoria"]),
+                Comando = "/" + l_nombre
+                                  .ToLower()
+                                  .Replace(" ", "")
+                                  .Replace("á", "a").Replace("é", "e")
+                                  .Replace("í", "i").Replace("ó", "o")
+                                  .Replace("ú", "u")
             };
         }
     }

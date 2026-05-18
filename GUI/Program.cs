@@ -16,6 +16,7 @@ namespace GUI
     {
         private static ITelegramBotClient _bot;
         private static ServicioProducto _servicioProducto = new ServicioProducto();
+        private static ServicioUsuario _servicioUsuario = new ServicioUsuario();
 
         static void Main(string[] args)
         {
@@ -48,6 +49,12 @@ namespace GUI
                 var usuario = update.Message.From?.FirstName;
                 var texto = update.Message.Text.Trim().ToLower();
 
+                // registrar usuario automáticamente si es la primera vez
+                _servicioUsuario.RegistrarSiNoExiste(
+                    idChat: chatId,
+                    nombre: update.Message.From?.FirstName + " " + update.Message.From?.LastName
+                );
+
                 Console.WriteLine($"[{usuario}] {texto}");
 
                 if (texto == "/start")
@@ -60,8 +67,7 @@ namespace GUI
                         cancellationToken: ct
                     );
                 }
-                
-                else 
+                else
                 {
                     await bot.SendMessage(
                         chatId: chatId,
@@ -80,9 +86,15 @@ namespace GUI
                 var chatId = query.Message.Chat.Id;
                 var messageId = query.Message.MessageId;
                 var data = query.Data;
-                var usuario = query.From?.FirstName; // 👈 nombre del usuario
+                var usuario = query.From?.FirstName;
 
-                Console.WriteLine($"[{usuario}] botón: {data}"); // 👈 log en consola
+                // registrar usuario automáticamente si es la primera vez
+                _servicioUsuario.RegistrarSiNoExiste(
+                    idChat: chatId,
+                    nombre: query.From?.FirstName + " " + query.From?.LastName
+                );
+
+                Console.WriteLine($"[{usuario}] botón: {data}");
 
                 await bot.AnswerCallbackQuery(
                     callbackQueryId: query.Id,
@@ -112,7 +124,6 @@ namespace GUI
                     var infoProducto = _servicioProducto.ObtenerInfoProducto(comando);
                     var tecladoVolver = _servicioProducto.ObtenerInlineProductoFinal(cat);
 
-                    // Edita el mensaje de la categoría con la info del producto
                     await bot.EditMessageText(
                         chatId: chatId,
                         messageId: messageId,
@@ -122,7 +133,6 @@ namespace GUI
                         cancellationToken: ct
                     );
 
-                    // Envía nuevo mensaje con supermercado + botones
                     await bot.SendMessage(
                         chatId: chatId,
                         text: "🏪 En este supermercado están los mejores precios: (próximamente)",
@@ -147,10 +157,7 @@ namespace GUI
                             cancellationToken: ct
                         );
                     }
-                    catch (ApiRequestException ex) when (ex.Message.Contains("message is not modified"))
-                    {
-                        // El mensaje ya tiene ese contenido, no hay nada que editar
-                    }
+                    catch (ApiRequestException ex) when (ex.Message.Contains("message is not modified")) { }
                 }
                 // ── Volver a categoría desde supermercado (envía nuevo) ──
                 else if (data.StartsWith("volver_prod_"))

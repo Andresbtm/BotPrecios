@@ -122,6 +122,7 @@ namespace GUI
                     var comando = "/" + data.Replace("prod_", "");
                     var cat = _servicioProducto.ObtenerCategoriaPorComando(comando);
                     var infoProducto = _servicioProducto.ObtenerInfoProducto(comando);
+                    var comparacion = _servicioProducto.ObtenerComparacionPrecios(comando);
                     var tecladoVolver = _servicioProducto.ObtenerInlineProductoFinal(cat);
 
                     await bot.EditMessageText(
@@ -135,8 +136,9 @@ namespace GUI
 
                     await bot.SendMessage(
                         chatId: chatId,
-                        text: "🏪 En este supermercado están los mejores precios: (próximamente)",
+                        text: comparacion,
                         replyMarkup: tecladoVolver,
+                        parseMode: ParseMode.Markdown,
                         cancellationToken: ct
                     );
                 }

@@ -8,6 +8,7 @@ namespace BLL
     public class ServicioProducto
     {
         private readonly RepositorioProducto _repositorio = new RepositorioProducto();
+        private readonly ServicioPrecio _servicioPrecio = new ServicioPrecio();
 
         // ── Menú de texto ────────────────────────────────────────────
         public string ObtenerMenuCategoria(string categoria, string emoji, string titulo)
@@ -26,8 +27,18 @@ namespace BLL
             var producto = _repositorio.ObtenerPorComando(comando);
             if (producto == null)
                 return "Producto no encontrado.";
+
             return $"{producto.Emoji} *{producto.Nombre}*\n" +
-                   $"Precio referencial: $XX.XX por {producto.Unidad}";
+                   $"Unidad: {producto.Unidad}";
+        }
+
+        public string ObtenerComparacionPrecios(string comando)
+        {
+            var producto = _repositorio.ObtenerPorComando(comando);
+            if (producto == null)
+                return "⚠️ Producto no encontrado.";
+
+            return _servicioPrecio.ObtenerComparacionPrecios(producto.Id);
         }
 
         public bool EsComandoProducto(string comando)

@@ -84,6 +84,7 @@
     <Compile Include="Conexion.cs" />
     <Compile Include="RepositorioProducto.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RepositorioSupermercado.cs" />
     <Compile Include="RepositorioUsuario.cs" />
   </ItemGroup>
   <ItemGroup>

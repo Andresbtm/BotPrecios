@@ -1,4 +1,5 @@
 ﻿using DAL;
+using ENTITY;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,11 @@ namespace BLL
         public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
         {
             _repositorio.Insertar(valor, fuente, idProducto, idSupermercado);
+        }
+
+        public List<PrecioDetalle> ObtenerPrecios(int idProducto)
+        {
+            return _repositorio.ListarRecientesPorProducto(idProducto);
         }
 
         public string ObtenerComparacionPrecios(int idProducto)

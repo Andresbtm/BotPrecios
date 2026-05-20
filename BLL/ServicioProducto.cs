@@ -9,6 +9,8 @@ namespace BLL
     {
         private readonly RepositorioProducto _repositorio = new RepositorioProducto();
         private readonly ServicioPrecio _servicioPrecio = new ServicioPrecio();
+        private readonly ServicioCalificacion _servicioCalificacion = new ServicioCalificacion();
+        private readonly ServicioUsuario _servicioUsuario = new ServicioUsuario();
 
         // ── Menú de texto ────────────────────────────────────────────
         public string ObtenerMenuCategoria(string categoria, string emoji, string titulo)
@@ -41,6 +43,34 @@ namespace BLL
             return _servicioPrecio.ObtenerComparacionPrecios(producto.Id);
         }
 
+        public string ObtenerComparacionConCalificacion(string comando)
+        {
+            var producto = _repositorio.ObtenerPorComando(comando);
+            if (producto == null) return "⚠️ Producto no encontrado.";
+
+            var precios = _servicioPrecio.ObtenerPrecios(producto.Id);
+            if (precios.Count == 0)
+                return "⚠️ No hay precios registrados para este producto.";
+
+            var sb = new StringBuilder();
+            sb.AppendLine("🏪 *Comparación de precios:*\n");
+
+            for (int i = 0; i < precios.Count; i++)
+            {
+                string icono = i == 0 ? "🟢" : "⚪";
+                double promedio = _servicioCalificacion.ObtenerPromedio(producto.Id, precios[i].IdSupermercado);
+                int votos = _servicioCalificacion.ObtenerTotalVotos(producto.Id, precios[i].IdSupermercado);
+                string estrellas = promedio > 0 ? $"⭐ {promedio}/5 ({votos} votos)" : "Sin calificaciones";
+
+                sb.AppendLine($"{icono} *{precios[i].NombreSupermercado}*: `${precios[i].Valor:N0}`");
+                sb.AppendLine($"   {estrellas}");
+            }
+
+            sb.AppendLine($"\n_Actualizado: {precios[0].FechaRegistro:dd/MM/yyyy HH:mm}_");
+            sb.AppendLine("\nToca un supermercado para calificar:");
+            return sb.ToString();
+        }
+
         public bool EsComandoProducto(string comando)
         {
             return _repositorio.ObtenerPorComando(comando) != null;
@@ -68,6 +98,39 @@ namespace BLL
                 case 3: return "carnes";
                 default: return "granos";
             }
+        }
+
+        public InlineKeyboardMarkup ObtenerInlineCalificar(string comando)
+        {
+            var producto = _repositorio.ObtenerPorComando(comando);
+            if (producto == null) return null;
+
+            var precios = _servicioPrecio.ObtenerPrecios(producto.Id);
+            var filas = new List<InlineKeyboardButton[]>();
+
+            foreach (var p in precios)
+            {
+                filas.Add(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        $"🏪 {p.NombreSupermercado}",
+                        $"calif_{producto.Id}_{p.IdSupermercado}")
+                });
+            }
+
+            var cat = ObtenerCategoriaPorComando(comando);
+            var info = ObtenerDatosCategoria(cat);
+
+            filas.Add(new[]
+            {
+                InlineKeyboardButton.WithCallbackData($"🔙 Volver a {info.titulo}", $"volver_prod_{cat}")
+            });
+            filas.Add(new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
+            });
+
+            return new InlineKeyboardMarkup(filas);
         }
 
         // Menú principal de categorías

@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Calificacion.cs" />
     <Compile Include="Categoria.cs" />
     <Compile Include="Precio.cs" />
     <Compile Include="PrecioDetalle.cs" />

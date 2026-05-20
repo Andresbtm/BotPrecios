@@ -17,6 +17,7 @@ namespace GUI
         private static ITelegramBotClient _bot;
         private static ServicioProducto _servicioProducto = new ServicioProducto();
         private static ServicioUsuario _servicioUsuario = new ServicioUsuario();
+        private static ServicioCalificacion _servicioCalificacion = new ServicioCalificacion();
 
         static void Main(string[] args)
         {
@@ -122,8 +123,8 @@ namespace GUI
                     var comando = "/" + data.Replace("prod_", "");
                     var cat = _servicioProducto.ObtenerCategoriaPorComando(comando);
                     var infoProducto = _servicioProducto.ObtenerInfoProducto(comando);
-                    var comparacion = _servicioProducto.ObtenerComparacionPrecios(comando);
-                    var tecladoVolver = _servicioProducto.ObtenerInlineProductoFinal(cat);
+                    var comparacion = _servicioProducto.ObtenerComparacionConCalificacion(comando);
+                    var tecladoCalif = _servicioProducto.ObtenerInlineCalificar(comando);
 
                     await bot.EditMessageText(
                         chatId: chatId,
@@ -137,8 +138,8 @@ namespace GUI
                     await bot.SendMessage(
                         chatId: chatId,
                         text: comparacion,
-                        replyMarkup: tecladoVolver,
                         parseMode: ParseMode.Markdown,
+                        replyMarkup: tecladoCalif,
                         cancellationToken: ct
                     );
                 }
@@ -201,6 +202,78 @@ namespace GUI
                         replyMarkup: _servicioProducto.ObtenerInlineCategorias(),
                         cancellationToken: ct
                     );
+                }
+                // ── Seleccionó supermercado para calificar ────────────────
+                else if (data.StartsWith("calif_"))
+                {
+                    var partes = data.Split('_');
+                    var idProducto = int.Parse(partes[1]);
+                    var idSupermercado = int.Parse(partes[2]);
+
+                    var teclado = new InlineKeyboardMarkup(new[]
+                    {
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("⭐ 1", $"puntaje_{idProducto}_{idSupermercado}_1"),
+                            InlineKeyboardButton.WithCallbackData("⭐⭐ 2", $"puntaje_{idProducto}_{idSupermercado}_2"),
+                            InlineKeyboardButton.WithCallbackData("⭐⭐⭐ 3", $"puntaje_{idProducto}_{idSupermercado}_3")
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("⭐⭐⭐⭐ 4", $"puntaje_{idProducto}_{idSupermercado}_4"),
+                            InlineKeyboardButton.WithCallbackData("⭐⭐⭐⭐⭐ 5", $"puntaje_{idProducto}_{idSupermercado}_5")
+                        }
+                    });
+
+                    await bot.SendMessage(
+                        chatId: chatId,
+                        text: "¿Qué calificación le das a este producto en este supermercado?",
+                        replyMarkup: teclado,
+                        cancellationToken: ct
+                    );
+                }
+                // ── Guardó el puntaje ─────────────────────────────────────
+                else if (data.StartsWith("puntaje_"))
+                {
+                    var partes = data.Split('_');
+                    var idProducto = int.Parse(partes[1]);
+                    var idSupermercado = int.Parse(partes[2]);
+                    var puntaje = int.Parse(partes[3]);
+
+                    var usuarioDb = _servicioUsuario.BuscarPorChat(chatId);
+                    if (usuarioDb == null)
+                    {
+                        await bot.SendMessage(
+                            chatId: chatId,
+                            text: "❓ Usa /start primero.",
+                            cancellationToken: ct
+                        );
+                        return;
+                    }
+
+                    try
+                    {
+                        _servicioCalificacion.Insertar(
+                            puntaje: puntaje,
+                            idProducto: idProducto,
+                            idSupermercado: idSupermercado,
+                            idUsuario: usuarioDb.IdUsuario
+                        );
+
+                        await bot.SendMessage(
+                            chatId: chatId,
+                            text: $"✅ Calificación guardada: {new string('⭐', puntaje)}",
+                            cancellationToken: ct
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        await bot.SendMessage(
+                            chatId: chatId,
+                            text: $"⚠️ {ex.Message}",
+                            cancellationToken: ct
+                        );
+                    }
                 }
             }
         }

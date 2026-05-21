@@ -10,7 +10,6 @@ namespace BLL
         private readonly RepositorioProducto _repositorio = new RepositorioProducto();
         private readonly ServicioPrecio _servicioPrecio = new ServicioPrecio();
         private readonly ServicioCalificacion _servicioCalificacion = new ServicioCalificacion();
-        private readonly ServicioUsuario _servicioUsuario = new ServicioUsuario();
 
         // ── Menú de texto ────────────────────────────────────────────
         public string ObtenerMenuCategoria(string categoria, string emoji, string titulo)
@@ -49,15 +48,6 @@ namespace BLL
                    $"📊 Promedio: `${promedio:N0}`";
         }
 
-        public string ObtenerComparacionPrecios(string comando)
-        {
-            var producto = _repositorio.ObtenerPorComando(comando);
-            if (producto == null)
-                return "⚠️ Producto no encontrado.";
-
-            return _servicioPrecio.ObtenerComparacionPrecios(producto.Id);
-        }
-
         public string ObtenerComparacionConCalificacion(string comando)
         {
             var producto = _repositorio.ObtenerPorComando(comando);
@@ -84,11 +74,6 @@ namespace BLL
             sb.AppendLine($"\n_Actualizado: {precios[0].FechaRegistro:dd/MM/yyyy HH:mm}_");
             sb.AppendLine("\nToca un supermercado para calificar:");
             return sb.ToString();
-        }
-
-        public bool EsComandoProducto(string comando)
-        {
-            return _repositorio.ObtenerPorComando(comando) != null;
         }
 
         public (string emoji, string titulo) ObtenerDatosCategoria(string categoria)
@@ -203,25 +188,6 @@ namespace BLL
             });
 
             return new InlineKeyboardMarkup(filas);
-        }
-
-        // Botones después de ver un producto con botón volver_prod_
-        public InlineKeyboardMarkup ObtenerInlineProductoFinal(string categoria)
-        {
-            var info = ObtenerDatosCategoria(categoria);
-            return new InlineKeyboardMarkup(new[]
-            {
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData(
-                        $"🔙 Volver a {info.titulo}",
-                        $"volver_prod_{categoria}")
-                },
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
-                }
-            });
         }
     }
 }

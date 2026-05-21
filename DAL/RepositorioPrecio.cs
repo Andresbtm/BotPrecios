@@ -83,5 +83,70 @@ namespace DAL
 
             return lista;
         }
+
+        public decimal ObtenerPrecioMinimo(int idProducto)
+        {
+            return EjecutarFuncionDecimal(
+                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_MINIMO(:p_id_producto); END;",
+                idProducto);
+        }
+
+        public decimal ObtenerPrecioMaximo(int idProducto)
+        {
+            return EjecutarFuncionDecimal(
+                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_MAXIMO(:p_id_producto); END;",
+                idProducto);
+        }
+
+        public decimal ObtenerPrecioPromedio(int idProducto)
+        {
+            return EjecutarFuncionDecimal(
+                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_PROMEDIO(:p_id_producto); END;",
+                idProducto);
+        }
+
+        public string ObtenerSupermercadoMasBarato(int idProducto)
+        {
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand(
+                    "BEGIN :resultado := PKG_PRECIO.FX_SUPERMERCADO_MAS_BARATO(:p_id_producto); END;", con))
+                {
+                    cmd.Parameters.Add(new OracleParameter("resultado", OracleDbType.Varchar2, 100)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
+                    {
+                        Value = idProducto
+                    });
+
+                    cmd.ExecuteNonQuery();
+                    return cmd.Parameters["resultado"].Value.ToString();
+                }
+            }
+        }
+
+        // Método privado reutilizable para funciones que devuelven NUMBER
+        private decimal EjecutarFuncionDecimal(string sql, int idProducto)
+        {
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand(sql, con))
+                {
+                    cmd.Parameters.Add(new OracleParameter("resultado", OracleDbType.Decimal)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
+                    {
+                        Value = idProducto
+                    });
+
+                    cmd.ExecuteNonQuery();
+                    return Convert.ToDecimal(cmd.Parameters["resultado"].Value.ToString());
+                }
+            }
+        }
     }
 }

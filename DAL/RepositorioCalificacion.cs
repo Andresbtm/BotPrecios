@@ -86,5 +86,57 @@ namespace DAL
 
             return lista;
         }
+
+        public double ObtenerPromedio(int idProducto, int idSupermercado)
+        {
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand(
+                    "BEGIN :resultado := PKG_CALIFICACION.FX_PROMEDIO_CALIFICACION(:p_id_producto, :p_id_supermercado); END;", con))
+                {
+                    cmd.Parameters.Add(new OracleParameter("resultado", OracleDbType.Decimal)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
+                    {
+                        Value = idProducto
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_supermercado", OracleDbType.Int32)
+                    {
+                        Value = idSupermercado
+                    });
+
+                    cmd.ExecuteNonQuery();
+                    return Convert.ToDouble(cmd.Parameters["resultado"].Value.ToString());
+                }
+            }
+        }
+
+        public int ObtenerTotalVotos(int idProducto, int idSupermercado)
+        {
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand(
+                    "BEGIN :resultado := PKG_CALIFICACION.FX_TOTAL_CALIFICACIONES(:p_id_producto, :p_id_supermercado); END;", con))
+                {
+                    cmd.Parameters.Add(new OracleParameter("resultado", OracleDbType.Int32)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
+                    {
+                        Value = idProducto
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_supermercado", OracleDbType.Int32)
+                    {
+                        Value = idSupermercado
+                    });
+
+                    cmd.ExecuteNonQuery();
+                    return Convert.ToInt32(cmd.Parameters["resultado"].Value.ToString());
+                }
+            }
+        }
     }
 }

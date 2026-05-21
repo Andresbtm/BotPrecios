@@ -41,5 +41,25 @@ namespace BLL
             sb.AppendLine($"\n_Actualizado: {precios[0].FechaRegistro:dd/MM/yyyy HH:mm}_");
             return sb.ToString();
         }
+
+        public decimal ObtenerPrecioMinimo(int idProducto)
+        {
+            return _repositorio.ObtenerPrecioMinimo(idProducto);
+        }
+
+        public decimal ObtenerPrecioMaximo(int idProducto)
+        {
+            return _repositorio.ObtenerPrecioMaximo(idProducto);
+        }
+
+        public decimal ObtenerPrecioPromedio(int idProducto)
+        {
+            return _repositorio.ObtenerPrecioPromedio(idProducto);
+        }
+
+        public string ObtenerSupermercadoMasBarato(int idProducto)
+        {
+            return _repositorio.ObtenerSupermercadoMasBarato(idProducto);
+        }
     }
 }

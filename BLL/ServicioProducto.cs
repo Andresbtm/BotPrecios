@@ -27,11 +27,26 @@ namespace BLL
         public string ObtenerInfoProducto(string comando)
         {
             var producto = _repositorio.ObtenerPorComando(comando);
-            if (producto == null)
-                return "Producto no encontrado.";
+            if (producto == null) return "Producto no encontrado.";
+
+            decimal minimo = _servicioPrecio.ObtenerPrecioMinimo(producto.Id);
+            decimal maximo = _servicioPrecio.ObtenerPrecioMaximo(producto.Id);
+            decimal promedio = _servicioPrecio.ObtenerPrecioPromedio(producto.Id);
+            string masBarato = _servicioPrecio.ObtenerSupermercadoMasBarato(producto.Id);
+
+            // Sin precios registrados
+            if (minimo == 0)
+            {
+                return $"{producto.Emoji} *{producto.Nombre}*\n" +
+                       $"Unidad: {producto.Unidad}\n\n" +
+                       $"⚠️ Aún no hay precios registrados para este producto.";
+            }
 
             return $"{producto.Emoji} *{producto.Nombre}*\n" +
-                   $"Unidad: {producto.Unidad}";
+                   $"Unidad: {producto.Unidad}\n\n" +
+                   $"💰 Más barato: *{masBarato}* — `${minimo:N0}`\n" +
+                   $"📈 Más caro: `${maximo:N0}`\n" +
+                   $"📊 Promedio: `${promedio:N0}`";
         }
 
         public string ObtenerComparacionPrecios(string comando)

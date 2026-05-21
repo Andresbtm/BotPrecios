@@ -28,19 +28,12 @@ namespace BLL
 
         public double ObtenerPromedio(int idProducto, int idSupermercado)
         {
-            var calificaciones = _repositorio.ListarPorProductoSuper(idProducto, idSupermercado);
-            if (calificaciones.Count == 0) return 0;
-
-            int l_total = 0;
-            foreach (var c in calificaciones)
-                l_total += c.Puntaje;
-
-            return Math.Round((double)l_total / calificaciones.Count, 1);
+            return _repositorio.ObtenerPromedio(idProducto, idSupermercado);
         }
 
         public int ObtenerTotalVotos(int idProducto, int idSupermercado)
         {
-            return _repositorio.ListarPorProductoSuper(idProducto, idSupermercado).Count;
+            return _repositorio.ObtenerTotalVotos(idProducto, idSupermercado);
         }
     }
 }

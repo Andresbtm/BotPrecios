@@ -6,9 +6,14 @@ using System.Data;
 
 namespace DAL
 {
-    public class RepositorioCalificacion
+    public class RepositorioCalificacion : IRepositorioCalificacion
     {
-        private readonly Conexion _conexion = new Conexion();
+        private readonly IConexion _conexion;
+
+        public RepositorioCalificacion(IConexion conexion)
+        {
+            _conexion = conexion;
+        }
 
         public void Insertar(int puntaje, int idProducto, int idSupermercado, int idUsuario)
         {

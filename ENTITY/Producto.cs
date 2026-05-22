@@ -8,5 +8,15 @@
         public string Emoji { get; set; }
         public int IdCategoria { get; set; }
         public string Comando { get; set; }
+
+        public void GenerarComando()
+        {
+            Comando = "/" + Nombre
+                          .ToLower()
+                          .Replace(" ", "")
+                          .Replace("á", "a").Replace("é", "e")
+                          .Replace("í", "i").Replace("ó", "o")
+                          .Replace("ú", "u");
+        }
     }
 }

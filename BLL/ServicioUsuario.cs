@@ -5,7 +5,12 @@ namespace BLL
 {
     public class ServicioUsuario
     {
-        private readonly RepositorioUsuario _repositorio = new RepositorioUsuario();
+        private readonly IRepositorioUsuario _repositorio;
+
+        public ServicioUsuario(IRepositorioUsuario repositorio)
+        {
+            _repositorio = repositorio;
+        }
 
         public void RegistrarSiNoExiste(long idChat, string nombre)
         {

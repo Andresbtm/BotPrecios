@@ -3,9 +3,14 @@ using System;
 
 namespace BLL
 {
-    public class ServicioCalificacion
+    public class ServicioCalificacion : IServicioCalificacion
     {
-        private readonly RepositorioCalificacion _repositorio = new RepositorioCalificacion();
+        private readonly IRepositorioCalificacion _repositorio;
+
+        public ServicioCalificacion(IRepositorioCalificacion repositorio)
+        {
+            _repositorio = repositorio;
+        }
 
         public void Insertar(int puntaje, int idProducto, int idSupermercado, int idUsuario)
         {

@@ -6,9 +6,14 @@ using System.Data;
 
 namespace DAL
 {
-    public class RepositorioProducto
+    public class RepositorioProducto : IRepositorioProducto
     {
-        private readonly Conexion _conexion = new Conexion();
+        private readonly IConexion _conexion;
+
+        public RepositorioProducto(IConexion conexion)
+        {
+            _conexion = conexion;
+        }
 
         public List<Producto> ObtenerPorCategoria(string nombreCategoria)
         {
@@ -104,22 +109,17 @@ namespace DAL
 
         private Producto MapearProducto(OracleDataReader reader)
         {
-            string l_nombre = reader["nombre"].ToString();
-
-            return new Producto
+            var producto = new Producto
             {
                 Id = Convert.ToInt32(reader["id_producto"]),
-                Nombre = l_nombre,
+                Nombre = reader["nombre"].ToString(),
                 Unidad = reader["unidad"] == DBNull.Value ? "" : reader["unidad"].ToString(),
                 Emoji = reader["emoji"] == DBNull.Value ? "" : reader["emoji"].ToString(),
-                IdCategoria = Convert.ToInt32(reader["id_categoria"]),
-                Comando = "/" + l_nombre
-                                  .ToLower()
-                                  .Replace(" ", "")
-                                  .Replace("á", "a").Replace("é", "e")
-                                  .Replace("í", "i").Replace("ó", "o")
-                                  .Replace("ú", "u")
+                IdCategoria = Convert.ToInt32(reader["id_categoria"])
             };
+
+            producto.GenerarComando();
+            return producto;
         }
     }
 }

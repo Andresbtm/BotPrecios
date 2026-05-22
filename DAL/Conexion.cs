@@ -2,7 +2,7 @@
 
 namespace DAL
 {
-    public class Conexion
+    public class Conexion : IConexion
     {
         private const string _cadena =
             "User Id=carlos;" +

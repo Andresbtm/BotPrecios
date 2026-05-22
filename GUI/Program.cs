@@ -14,12 +14,19 @@ namespace GUI
     internal class Program
     {
         private static ITelegramBotClient _bot;
-        private static ServicioProducto _servicioProducto = new ServicioProducto();
-        private static ServicioUsuario _servicioUsuario = new ServicioUsuario();
-        private static ServicioCalificacion _servicioCalificacion = new ServicioCalificacion();
+        private static ServicioProducto _servicioProducto = FabricaServicios.CrearServicioProducto();
+        private static ServicioUsuario _servicioUsuario = FabricaServicios.CrearServicioUsuario();
+        private static ServicioCalificacion _servicioCalificacion = FabricaServicios.CrearServicioCalificacion();
+        private static TecladoBot _tecladoBot;
 
         static void Main(string[] args)
         {
+            _tecladoBot = new TecladoBot(
+                FabricaServicios.CrearServicioProducto(),
+                FabricaServicios.CrearServicioPrecio(),
+                FabricaServicios.CrearServicioCategoria()
+            );
+
             string token = "8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74";
             _bot = new TelegramBotClient(token);
 
@@ -63,7 +70,7 @@ namespace GUI
                         chatId: chatId,
                         text: "👋 ¡Hola! Soy el bot de los mejores precios de productos de la canasta básica.\n\n📦 *Elige una categoría:*",
                         parseMode: ParseMode.Markdown,
-                        replyMarkup: _servicioProducto.ObtenerInlineCategorias(),
+                        replyMarkup: _tecladoBot.ObtenerInlineCategorias(),
                         cancellationToken: ct
                     );
                 }
@@ -102,7 +109,7 @@ namespace GUI
                 );
 
                 // ── Categorías (edita el mensaje actual) ─────────────
-                if (data == "cat_granos" || data == "cat_aceites" || data == "cat_carnes")
+                if (data.StartsWith("cat_"))
                 {
                     var cat = data.Replace("cat_", "");
                     var info = _servicioProducto.ObtenerDatosCategoria(cat);
@@ -112,7 +119,7 @@ namespace GUI
                         messageId: messageId,
                         text: _servicioProducto.ObtenerMenuCategoria(cat, info.emoji, info.titulo),
                         parseMode: ParseMode.Markdown,
-                        replyMarkup: _servicioProducto.ObtenerInlineProductos(cat),
+                        replyMarkup: _tecladoBot.ObtenerInlineProductos(cat),
                         cancellationToken: ct
                     );
                 }
@@ -121,9 +128,10 @@ namespace GUI
                 {
                     var comando = "/" + data.Replace("prod_", "");
                     var cat = _servicioProducto.ObtenerCategoriaPorComando(comando);
+                    var info = _servicioProducto.ObtenerDatosCategoria(cat);
                     var infoProducto = _servicioProducto.ObtenerInfoProducto(comando);
                     var comparacion = _servicioProducto.ObtenerComparacionConCalificacion(comando);
-                    var tecladoCalif = _servicioProducto.ObtenerInlineCalificar(comando);
+                    var teclado = _tecladoBot.ObtenerInlineCalificar(comando, cat, info.titulo);
 
                     await bot.EditMessageText(
                         chatId: chatId,
@@ -138,7 +146,7 @@ namespace GUI
                         chatId: chatId,
                         text: comparacion,
                         parseMode: ParseMode.Markdown,
-                        replyMarkup: tecladoCalif,
+                        replyMarkup: teclado,
                         cancellationToken: ct
                     );
                 }
@@ -155,7 +163,7 @@ namespace GUI
                             messageId: messageId,
                             text: _servicioProducto.ObtenerMenuCategoria(cat, info.emoji, info.titulo),
                             parseMode: ParseMode.Markdown,
-                            replyMarkup: _servicioProducto.ObtenerInlineProductos(cat),
+                            replyMarkup: _tecladoBot.ObtenerInlineProductos(cat),
                             cancellationToken: ct
                         );
                     }
@@ -171,7 +179,7 @@ namespace GUI
                         chatId: chatId,
                         text: _servicioProducto.ObtenerMenuCategoria(cat, info.emoji, info.titulo),
                         parseMode: ParseMode.Markdown,
-                        replyMarkup: _servicioProducto.ObtenerInlineProductos(cat),
+                        replyMarkup: _tecladoBot.ObtenerInlineProductos(cat),
                         cancellationToken: ct
                     );
                 }
@@ -185,7 +193,7 @@ namespace GUI
                             messageId: messageId,
                             text: "📦 *Elige una categoría:*",
                             parseMode: ParseMode.Markdown,
-                            replyMarkup: _servicioProducto.ObtenerInlineCategorias(),
+                            replyMarkup: _tecladoBot.ObtenerInlineCategorias(),
                             cancellationToken: ct
                         );
                     }
@@ -198,7 +206,7 @@ namespace GUI
                         chatId: chatId,
                         text: "📦 *Elige una categoría:*",
                         parseMode: ParseMode.Markdown,
-                        replyMarkup: _servicioProducto.ObtenerInlineCategorias(),
+                        replyMarkup: _tecladoBot.ObtenerInlineCategorias(),
                         cancellationToken: ct
                     );
                 }

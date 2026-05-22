@@ -4,9 +4,14 @@ using System.Collections.Generic;
 
 namespace BLL
 {
-    public class ServicioPrecio
+    public class ServicioPrecio : IServicioPrecio
     {
-        private readonly RepositorioPrecio _repositorio = new RepositorioPrecio();
+        private readonly IRepositorioPrecio _repositorio;
+
+        public ServicioPrecio(IRepositorioPrecio repositorio)
+        {
+            _repositorio = repositorio;
+        }
 
         public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
         {

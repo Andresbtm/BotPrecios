@@ -82,7 +82,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Conexion.cs" />
+    <Compile Include="IConexion.cs" />
+    <Compile Include="IRepositorioCalificacion.cs" />
+    <Compile Include="IRepositorioCategoria.cs" />
+    <Compile Include="IRepositorioPrecio.cs" />
+    <Compile Include="IRepositorioProducto.cs" />
+    <Compile Include="IRepositorioSupermercado.cs" />
+    <Compile Include="IRepositorioUsuario.cs" />
     <Compile Include="RepositorioCalificacion.cs" />
+    <Compile Include="RepositorioCategoria.cs" />
     <Compile Include="RepositorioPrecio.cs" />
     <Compile Include="RepositorioProducto.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

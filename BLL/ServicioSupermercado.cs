@@ -6,7 +6,12 @@ namespace BLL
 {
     public class ServicioSupermercado
     {
-        private readonly RepositorioSupermercado _repositorio = new RepositorioSupermercado();
+        private readonly IRepositorioSupermercado _repositorio;
+
+        public ServicioSupermercado(IRepositorioSupermercado repositorio)
+        {
+            _repositorio = repositorio;
+        }
 
         public void Insertar(string nombre, string ciudad)
         {

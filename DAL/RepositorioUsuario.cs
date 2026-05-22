@@ -5,9 +5,14 @@ using System.Data;
 
 namespace DAL
 {
-    public class RepositorioUsuario
+    public class RepositorioUsuario : IRepositorioUsuario
     {
-        private readonly Conexion _conexion = new Conexion();
+        private readonly IConexion _conexion;
+
+        public RepositorioUsuario(IConexion conexion)
+        {
+            _conexion = conexion;
+        }
 
         public void Insertar(long idChat, string nombre)
         {

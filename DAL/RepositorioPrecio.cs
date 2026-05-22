@@ -6,9 +6,14 @@ using System.Data;
 
 namespace DAL
 {
-    public class RepositorioPrecio
+    public class RepositorioPrecio : IRepositorioPrecio
     {
-        private readonly Conexion _conexion = new Conexion();
+        private readonly IConexion _conexion;
+
+        public RepositorioPrecio(IConexion conexion)
+        {
+            _conexion = conexion;
+        }
 
         public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
         {

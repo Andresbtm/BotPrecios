@@ -8,6 +8,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using System.Configuration;
 
 namespace GUI
 {
@@ -26,9 +27,11 @@ namespace GUI
                 FabricaServicios.CrearServicioPrecio(),
                 FabricaServicios.CrearServicioCategoria()
             );
-
-            string token = "8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74";
+            string token = ConfigurationManager.AppSettings["TelegramToken"];
             _bot = new TelegramBotClient(token);
+
+            //string token = "8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74";
+            //_bot = new TelegramBotClient(token);
 
             var cts = new CancellationTokenSource();
 

@@ -21,7 +21,7 @@ namespace GUI
 
         public InlineKeyboardMarkup ObtenerInlineCategorias()
         {
-            var categorias = _servicioCategoria.ListarTodas();
+            var categorias = _servicioCategoria.ObtenerTodos();
             var filas = new List<InlineKeyboardButton[]>();
 
             for (int i = 0; i < categorias.Count; i += 2)

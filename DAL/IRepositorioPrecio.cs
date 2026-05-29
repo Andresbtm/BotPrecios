@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace DAL
 {
-    public interface IRepositorioPrecio
+    public interface IRepositorioPrecio : IRepositorio<Precio>
     {
         void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado);
         List<PrecioDetalle> ListarRecientesPorProducto(int idProducto);

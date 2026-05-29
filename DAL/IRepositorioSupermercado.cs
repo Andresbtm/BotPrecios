@@ -3,10 +3,9 @@ using System.Collections.Generic;
 
 namespace DAL
 {
-    public interface IRepositorioSupermercado
+    public interface IRepositorioSupermercado : IRepositorio<Supermercado>
     {
         void Insertar(string nombre, string ciudad);
-        List<Supermercado> ListarTodos();
         List<Supermercado> ListarActivos();
         Supermercado BuscarPorId(int idSupermercado);
         void ActualizarActivo(int idSupermercado, int activo);

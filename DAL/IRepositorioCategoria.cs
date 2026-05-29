@@ -1,11 +1,9 @@
 ﻿using ENTITY;
-using System.Collections.Generic;
 
 namespace DAL
 {
-    public interface IRepositorioCategoria
+    public interface IRepositorioCategoria : IRepositorio<Categoria>
     {
-        List<Categoria> ListarTodas();
         Categoria BuscarPorNombre(string nombre);
     }
 }

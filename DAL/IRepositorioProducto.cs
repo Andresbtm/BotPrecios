@@ -3,10 +3,9 @@ using System.Collections.Generic;
 
 namespace DAL
 {
-    public interface IRepositorioProducto
+    public interface IRepositorioProducto : IRepositorio<Producto>
     {
         List<Producto> ObtenerPorCategoria(string nombreCategoria);
         Producto ObtenerPorComando(string comando);
-        List<Producto> ObtenerTodos();
     }
 }

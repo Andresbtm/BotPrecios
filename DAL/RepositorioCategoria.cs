@@ -15,7 +15,7 @@ namespace DAL
             _conexion = conexion;
         }
 
-        public List<Categoria> ListarTodas()
+        public List<Categoria> ObtenerTodos()
         {
             List<Categoria> lista = new List<Categoria>();
 

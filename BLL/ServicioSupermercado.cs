@@ -18,9 +18,9 @@ namespace BLL
             _repositorio.Insertar(nombre, ciudad);
         }
 
-        public List<Supermercado> ListarTodos()
+        public List<Supermercado> ObtenerTodos()
         {
-            return _repositorio.ListarTodos();
+            return _repositorio.ObtenerTodos();
         }
 
         public List<Supermercado> ListarActivos()

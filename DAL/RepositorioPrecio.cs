@@ -86,6 +86,41 @@ namespace DAL
             return lista;
         }
 
+        public List<Precio> ObtenerTodos()
+        {
+            List<Precio> lista = new List<Precio>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_PRECIO.PR_LISTAR_TODOS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(new Precio
+                            {
+                                IdPrecio = Convert.ToInt32(reader["id_precio"]),
+                                Valor = Convert.ToDecimal(reader["valor"]),
+                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"]),
+                                Fuente = reader["fuente"] == DBNull.Value ? "" : reader["fuente"].ToString(),
+                                IdProducto = Convert.ToInt32(reader["id_producto"]),
+                                IdSupermercado = Convert.ToInt32(reader["id_supermercado"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
+
         public decimal ObtenerPrecioMinimo(int idProducto)
         {
             return EjecutarFuncionDecimal(

@@ -37,7 +37,7 @@ namespace DAL
             }
         }
 
-        public List<Supermercado> ListarTodos()
+        public List<Supermercado> ObtenerTodos()
         {
             return Listar("PKG_SUPERMERCADO.PR_LISTAR_TODOS");
         }

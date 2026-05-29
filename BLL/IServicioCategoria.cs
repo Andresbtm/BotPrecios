@@ -5,7 +5,7 @@ namespace BLL
 {
     public interface IServicioCategoria
     {
-        List<Categoria> ListarTodas();
+        List<Categoria> ObtenerTodos();
         (string emoji, string titulo) ObtenerDatosCategoria(string nombreCategoria);
         string ObtenerNombrePorId(int idCategoria);
     }

@@ -1,6 +1,7 @@
 ﻿using ENTITY;
 using Oracle.ManagedDataAccess.Client;
 using System;
+using System.Collections.Generic;
 using System.Data;
 
 namespace DAL
@@ -70,6 +71,39 @@ namespace DAL
             }
 
             return null;
+        }
+
+        public List<Usuario> ObtenerTodos()
+        {
+            List<Usuario> lista = new List<Usuario>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_USUARIO.PR_LISTAR_TODOS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(new Usuario
+                            {
+                                IdUsuario = Convert.ToInt32(reader["id_usuario"]),
+                                IdChat = Convert.ToInt64(reader["id_chat"]),
+                                Nombre = reader["nombre"] == DBNull.Value ? "" : reader["nombre"].ToString(),
+                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
         }
     }
 }

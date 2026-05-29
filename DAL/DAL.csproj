@@ -84,6 +84,7 @@
   <ItemGroup>
     <Compile Include="Conexion.cs" />
     <Compile Include="IConexion.cs" />
+    <Compile Include="IRepositorio.cs" />
     <Compile Include="IRepositorioCalificacion.cs" />
     <Compile Include="IRepositorioCategoria.cs" />
     <Compile Include="IRepositorioPrecio.cs" />

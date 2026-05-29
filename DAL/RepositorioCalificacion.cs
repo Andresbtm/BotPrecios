@@ -89,6 +89,41 @@ namespace DAL
             return lista;
         }
 
+        public List<Calificacion> ObtenerTodos()
+        {
+            List<Calificacion> lista = new List<Calificacion>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_CALIFICACION.PR_LISTAR_TODOS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(new Calificacion
+                            {
+                                IdCalificacion = Convert.ToInt32(reader["id_calificacion"]),
+                                Puntaje = Convert.ToInt32(reader["puntaje"]),
+                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"]),
+                                IdProducto = Convert.ToInt32(reader["id_producto"]),
+                                IdSupermercado = Convert.ToInt32(reader["id_supermercado"]),
+                                IdUsuario = Convert.ToInt32(reader["id_usuario"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
+
         public double ObtenerPromedio(int idProducto, int idSupermercado)
         {
             using (OracleConnection con = _conexion.AbrirConexion())

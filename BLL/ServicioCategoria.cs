@@ -13,9 +13,9 @@ namespace BLL
             _repositorio = repositorio;
         }
 
-        public List<Categoria> ListarTodas()
+        public List<Categoria> ObtenerTodos()
         {
-            return _repositorio.ListarTodas();
+            return _repositorio.ObtenerTodos();
         }
 
         public (string emoji, string titulo) ObtenerDatosCategoria(string nombreCategoria)
@@ -27,7 +27,7 @@ namespace BLL
 
         public string ObtenerNombrePorId(int idCategoria)
         {
-            var categorias = _repositorio.ListarTodas();
+            var categorias = _repositorio.ObtenerTodos();
             var categoria = categorias.Find(c => c.IdCategoria == idCategoria);
             return categoria != null ? categoria.Nombre.ToLower() : "granos";
         }

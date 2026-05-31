@@ -181,7 +181,11 @@ namespace DAL
                     });
 
                     cmd.ExecuteNonQuery();
-                    return Convert.ToDecimal(cmd.Parameters["resultado"].Value.ToString());
+
+                    // Usar InvariantCulture para evitar problemas de configuración regional
+                    string valorStr = cmd.Parameters["resultado"].Value.ToString()
+                                         .Replace(",", ".");
+                    return decimal.Parse(valorStr, System.Globalization.CultureInfo.InvariantCulture);
                 }
             }
         }

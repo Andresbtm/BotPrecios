@@ -14,25 +14,22 @@ namespace BLL
         public static ServicioProducto CrearServicioProducto()
         {
             IConexion conexion = new Conexion();
-
             IRepositorioProducto repoProducto = new RepositorioProducto(conexion);
             IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
             IRepositorioCalificacion repoCalificacion = new RepositorioCalificacion(conexion);
             IRepositorioCategoria repoCategoria = new RepositorioCategoria(conexion);
-
-            IServicioPrecio servicioPrecio = new ServicioPrecio(repoPrecio);
+            IServicioPrecio servicioPrecio = new ServicioPrecio(repoPrecio, repoProducto); // ← agrega repoProducto
             IServicioCalificacion servicioCalificacion = new ServicioCalificacion(repoCalificacion);
             IServicioCategoria servicioCategoria = new ServicioCategoria(repoCategoria);
-
             return new ServicioProducto(repoProducto, servicioPrecio, servicioCalificacion, servicioCategoria);
         }
 
-        public static ServicioPrecio CrearServicioPrecio()
+        /*public static ServicioPrecio CrearServicioPrecio()
         {
             IConexion conexion = new Conexion();
             IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
             return new ServicioPrecio(repoPrecio);
-        }
+        }*/
 
         public static ServicioUsuario CrearServicioUsuario()
         {
@@ -53,6 +50,14 @@ namespace BLL
             IConexion conexion = new Conexion();
             IRepositorioSupermercado repoSupermercado = new RepositorioSupermercado(conexion);
             return new ServicioSupermercado(repoSupermercado);
+        }
+
+        public static ServicioPrecio CrearServicioPrecio()
+        {
+            IConexion conexion = new Conexion();
+            IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
+            IRepositorioProducto repoProducto = new RepositorioProducto(conexion);
+            return new ServicioPrecio(repoPrecio, repoProducto);
         }
     }
 }

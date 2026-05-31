@@ -61,6 +61,7 @@ DAL/App.config
 DAL/Conexion.cs
 DAL/DAL.csproj
 DAL/IConexion.cs
+DAL/IRepositorio.cs
 DAL/IRepositorioCalificacion.cs
 DAL/IRepositorioCategoria.cs
 DAL/IRepositorioPrecio.cs
@@ -602,21 +603,6 @@ namespace BLL
 }
 </file>
 
-<file path="BLL/IServicioCategoria.cs">
-using ENTITY;
-using System.Collections.Generic;
-
-namespace BLL
-{
-    public interface IServicioCategoria
-    {
-        List<Categoria> ListarTodas();
-        (string emoji, string titulo) ObtenerDatosCategoria(string nombreCategoria);
-        string ObtenerNombrePorId(int idCategoria);
-    }
-}
-</file>
-
 <file path="BLL/IServicioPrecio.cs">
 using ENTITY;
 using System.Collections.Generic;
@@ -669,44 +655,6 @@ using System.Runtime.InteropServices;
 //
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
-</file>
-
-<file path="BLL/ServicioCategoria.cs">
-using DAL;
-using ENTITY;
-using System.Collections.Generic;
-
-namespace BLL
-{
-    public class ServicioCategoria : IServicioCategoria
-    {
-        private readonly IRepositorioCategoria _repositorio;
-
-        public ServicioCategoria(IRepositorioCategoria repositorio)
-        {
-            _repositorio = repositorio;
-        }
-
-        public List<Categoria> ListarTodas()
-        {
-            return _repositorio.ListarTodas();
-        }
-
-        public (string emoji, string titulo) ObtenerDatosCategoria(string nombreCategoria)
-        {
-            var categoria = _repositorio.BuscarPorNombre(nombreCategoria);
-            if (categoria == null) return ("📦", nombreCategoria);
-            return (categoria.Emoji, categoria.Nombre);
-        }
-
-        public string ObtenerNombrePorId(int idCategoria)
-        {
-            var categorias = _repositorio.ListarTodas();
-            var categoria = categorias.Find(c => c.IdCategoria == idCategoria);
-            return categoria != null ? categoria.Nombre.ToLower() : "granos";
-        }
-    }
-}
 </file>
 
 <file path="BotPrecios.sln">
@@ -813,95 +761,14 @@ namespace DAL
 }
 </file>
 
-<file path="DAL/IRepositorioCalificacion.cs">
-using ENTITY;
+<file path="DAL/IRepositorio.cs">
 using System.Collections.Generic;
 
 namespace DAL
 {
-    public interface IRepositorioCalificacion
+    public interface IRepositorio<T>
     {
-        void Insertar(int puntaje, int idProducto, int idSupermercado, int idUsuario);
-        List<Calificacion> ListarPorProductoSuper(int idProducto, int idSupermercado);
-        double ObtenerPromedio(int idProducto, int idSupermercado);
-        int ObtenerTotalVotos(int idProducto, int idSupermercado);
-    }
-}
-</file>
-
-<file path="DAL/IRepositorioCategoria.cs">
-using ENTITY;
-using System.Collections.Generic;
-
-namespace DAL
-{
-    public interface IRepositorioCategoria
-    {
-        List<Categoria> ListarTodas();
-        Categoria BuscarPorNombre(string nombre);
-    }
-}
-</file>
-
-<file path="DAL/IRepositorioPrecio.cs">
-using ENTITY;
-using System.Collections.Generic;
-
-namespace DAL
-{
-    public interface IRepositorioPrecio
-    {
-        void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado);
-        List<PrecioDetalle> ListarRecientesPorProducto(int idProducto);
-        decimal ObtenerPrecioMinimo(int idProducto);
-        decimal ObtenerPrecioMaximo(int idProducto);
-        decimal ObtenerPrecioPromedio(int idProducto);
-        string ObtenerSupermercadoMasBarato(int idProducto);
-    }
-}
-</file>
-
-<file path="DAL/IRepositorioProducto.cs">
-using ENTITY;
-using System.Collections.Generic;
-
-namespace DAL
-{
-    public interface IRepositorioProducto
-    {
-        List<Producto> ObtenerPorCategoria(string nombreCategoria);
-        Producto ObtenerPorComando(string comando);
-        List<Producto> ObtenerTodos();
-    }
-}
-</file>
-
-<file path="DAL/IRepositorioSupermercado.cs">
-using ENTITY;
-using System.Collections.Generic;
-
-namespace DAL
-{
-    public interface IRepositorioSupermercado
-    {
-        void Insertar(string nombre, string ciudad);
-        List<Supermercado> ListarTodos();
-        List<Supermercado> ListarActivos();
-        Supermercado BuscarPorId(int idSupermercado);
-        void ActualizarActivo(int idSupermercado, int activo);
-    }
-}
-</file>
-
-<file path="DAL/IRepositorioUsuario.cs">
-using ENTITY;
-
-namespace DAL
-{
-    public interface IRepositorioUsuario
-    {
-        void Insertar(long idChat, string nombre);
-        Usuario BuscarPorChat(long idChat);
+        List<T> ObtenerTodos();
     }
 }
 </file>
@@ -1326,90 +1193,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("1.0.0.0")]
 </file>
 
-<file path="DAL/RepositorioCategoria.cs">
-using ENTITY;
-using Oracle.ManagedDataAccess.Client;
-using System;
-using System.Collections.Generic;
-using System.Data;
-
-namespace DAL
-{
-    public class RepositorioCategoria : IRepositorioCategoria
-    {
-        private readonly IConexion _conexion;
-
-        public RepositorioCategoria(IConexion conexion)
-        {
-            _conexion = conexion;
-        }
-
-        public List<Categoria> ListarTodas()
-        {
-            List<Categoria> lista = new List<Categoria>();
-
-            using (OracleConnection con = _conexion.AbrirConexion())
-            {
-                using (OracleCommand cmd = new OracleCommand("PKG_CATEGORIA.PR_LISTAR_CATEGORIAS", con))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
-                    {
-                        Direction = ParameterDirection.Output
-                    });
-
-                    using (OracleDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                            lista.Add(MapearCategoria(reader));
-                    }
-                }
-            }
-
-            return lista;
-        }
-
-        public Categoria BuscarPorNombre(string nombre)
-        {
-            using (OracleConnection con = _conexion.AbrirConexion())
-            {
-                using (OracleCommand cmd = new OracleCommand("PKG_CATEGORIA.PR_BUSCAR_POR_NOMBRE", con))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add(new OracleParameter("p_nombre", OracleDbType.Varchar2)
-                    {
-                        Value = nombre
-                    });
-                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
-                    {
-                        Direction = ParameterDirection.Output
-                    });
-
-                    using (OracleDataReader reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                            return MapearCategoria(reader);
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        private Categoria MapearCategoria(OracleDataReader reader)
-        {
-            return new Categoria
-            {
-                IdCategoria = Convert.ToInt32(reader["id_categoria"]),
-                Nombre = reader["nombre"].ToString(),
-                Emoji = reader["emoji"] == DBNull.Value ? "" : reader["emoji"].ToString(),
-                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"])
-            };
-        }
-    }
-}
-</file>
-
 <file path="ENTITY/Properties/AssemblyInfo.cs">
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -1482,6 +1265,330 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("1.0.0.0")]
 </file>
 
+<file path="BLL/IServicioCategoria.cs">
+using ENTITY;
+using System.Collections.Generic;
+
+namespace BLL
+{
+    public interface IServicioCategoria
+    {
+        List<Categoria> ObtenerTodos();
+        (string emoji, string titulo) ObtenerDatosCategoria(string nombreCategoria);
+        string ObtenerNombrePorId(int idCategoria);
+    }
+}
+</file>
+
+<file path="BLL/ServicioCategoria.cs">
+using DAL;
+using ENTITY;
+using System.Collections.Generic;
+
+namespace BLL
+{
+    public class ServicioCategoria : IServicioCategoria
+    {
+        private readonly IRepositorioCategoria _repositorio;
+
+        public ServicioCategoria(IRepositorioCategoria repositorio)
+        {
+            _repositorio = repositorio;
+        }
+
+        public List<Categoria> ObtenerTodos()
+        {
+            return _repositorio.ObtenerTodos();
+        }
+
+        public (string emoji, string titulo) ObtenerDatosCategoria(string nombreCategoria)
+        {
+            var categoria = _repositorio.BuscarPorNombre(nombreCategoria);
+            if (categoria == null) return ("📦", nombreCategoria);
+            return (categoria.Emoji, categoria.Nombre);
+        }
+
+        public string ObtenerNombrePorId(int idCategoria)
+        {
+            var categorias = _repositorio.ObtenerTodos();
+            var categoria = categorias.Find(c => c.IdCategoria == idCategoria);
+            return categoria != null ? categoria.Nombre.ToLower() : "granos";
+        }
+    }
+}
+</file>
+
+<file path="DAL/IRepositorioCalificacion.cs">
+using ENTITY;
+using System.Collections.Generic;
+
+namespace DAL
+{
+    public interface IRepositorioCalificacion : IRepositorio<Calificacion>
+    {
+        void Insertar(int puntaje, int idProducto, int idSupermercado, int idUsuario);
+        List<Calificacion> ListarPorProductoSuper(int idProducto, int idSupermercado);
+        double ObtenerPromedio(int idProducto, int idSupermercado);
+        int ObtenerTotalVotos(int idProducto, int idSupermercado);
+    }
+}
+</file>
+
+<file path="DAL/IRepositorioCategoria.cs">
+using ENTITY;
+
+namespace DAL
+{
+    public interface IRepositorioCategoria : IRepositorio<Categoria>
+    {
+        Categoria BuscarPorNombre(string nombre);
+    }
+}
+</file>
+
+<file path="DAL/IRepositorioPrecio.cs">
+using ENTITY;
+using System.Collections.Generic;
+
+namespace DAL
+{
+    public interface IRepositorioPrecio : IRepositorio<Precio>
+    {
+        void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado);
+        List<PrecioDetalle> ListarRecientesPorProducto(int idProducto);
+        decimal ObtenerPrecioMinimo(int idProducto);
+        decimal ObtenerPrecioMaximo(int idProducto);
+        decimal ObtenerPrecioPromedio(int idProducto);
+        string ObtenerSupermercadoMasBarato(int idProducto);
+    }
+}
+</file>
+
+<file path="DAL/IRepositorioProducto.cs">
+using ENTITY;
+using System.Collections.Generic;
+
+namespace DAL
+{
+    public interface IRepositorioProducto : IRepositorio<Producto>
+    {
+        List<Producto> ObtenerPorCategoria(string nombreCategoria);
+        Producto ObtenerPorComando(string comando);
+    }
+}
+</file>
+
+<file path="DAL/IRepositorioSupermercado.cs">
+using ENTITY;
+using System.Collections.Generic;
+
+namespace DAL
+{
+    public interface IRepositorioSupermercado : IRepositorio<Supermercado>
+    {
+        void Insertar(string nombre, string ciudad);
+        List<Supermercado> ListarActivos();
+        Supermercado BuscarPorId(int idSupermercado);
+        void ActualizarActivo(int idSupermercado, int activo);
+    }
+}
+</file>
+
+<file path="DAL/IRepositorioUsuario.cs">
+using ENTITY;
+
+namespace DAL
+{
+    public interface IRepositorioUsuario : IRepositorio<Usuario>
+    {
+        void Insertar(long idChat, string nombre);
+        Usuario BuscarPorChat(long idChat);
+    }
+}
+</file>
+
+<file path="DAL/RepositorioCategoria.cs">
+using ENTITY;
+using Oracle.ManagedDataAccess.Client;
+using System;
+using System.Collections.Generic;
+using System.Data;
+
+namespace DAL
+{
+    public class RepositorioCategoria : IRepositorioCategoria
+    {
+        private readonly IConexion _conexion;
+
+        public RepositorioCategoria(IConexion conexion)
+        {
+            _conexion = conexion;
+        }
+
+        public List<Categoria> ObtenerTodos()
+        {
+            List<Categoria> lista = new List<Categoria>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_CATEGORIA.PR_LISTAR_CATEGORIAS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                            lista.Add(MapearCategoria(reader));
+                    }
+                }
+            }
+
+            return lista;
+        }
+
+        public Categoria BuscarPorNombre(string nombre)
+        {
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_CATEGORIA.PR_BUSCAR_POR_NOMBRE", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new OracleParameter("p_nombre", OracleDbType.Varchar2)
+                    {
+                        Value = nombre
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                            return MapearCategoria(reader);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private Categoria MapearCategoria(OracleDataReader reader)
+        {
+            return new Categoria
+            {
+                IdCategoria = Convert.ToInt32(reader["id_categoria"]),
+                Nombre = reader["nombre"].ToString(),
+                Emoji = reader["emoji"] == DBNull.Value ? "" : reader["emoji"].ToString(),
+                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"])
+            };
+        }
+    }
+}
+</file>
+
+<file path="ENTITY/Calificacion.cs">
+using System;
+
+namespace ENTITY
+{
+    public class Calificacion
+    {
+        public int IdCalificacion { get; set; }
+        public int Puntaje { get; set; }
+        public DateTime FechaRegistro { get; set; }
+        public int IdProducto { get; set; }
+        public int IdSupermercado { get; set; }
+        public int IdUsuario { get; set; }
+    }
+}
+</file>
+
+<file path="ENTITY/Categoria.cs">
+using System;
+
+namespace ENTITY
+{
+    public class Categoria
+    {
+        public int IdCategoria { get; set; }
+        public string Nombre { get; set; }
+        public string Emoji { get; set; }
+        public DateTime FechaRegistro { get; set; }
+    }
+}
+</file>
+
+<file path="ENTITY/Precio.cs">
+using System;
+
+namespace ENTITY
+{
+    public class Precio
+    {
+        public int IdPrecio { get; set; }
+        public decimal Valor { get; set; }
+        public DateTime FechaRegistro { get; set; }
+        public string Fuente { get; set; }
+        public int IdProducto { get; set; }
+        public int IdSupermercado { get; set; }
+    }
+}
+</file>
+
+<file path="ENTITY/PrecioDetalle.cs">
+using System;
+
+namespace ENTITY
+{
+    public class PrecioDetalle
+    {
+        public int IdPrecio { get; set; }
+        public decimal Valor { get; set; }
+        public DateTime FechaRegistro { get; set; }
+        public string Fuente { get; set; }
+        public int IdProducto { get; set; }
+        public int IdSupermercado { get; set; }
+        public string NombreSupermercado { get; set; }
+    }
+}
+</file>
+
+<file path="ENTITY/Supermercado.cs">
+using System;
+
+namespace ENTITY
+{
+    public class Supermercado
+    {
+        public int IdSupermercado { get; set; }
+        public string Nombre { get; set; }
+        public string Ciudad { get; set; }
+        public int Activo { get; set; }
+        public DateTime FechaRegistro { get; set; }
+    }
+}
+</file>
+
+<file path="ENTITY/Usuario.cs">
+using System;
+
+namespace ENTITY
+{
+    public class Usuario
+    {
+        public int IdUsuario { get; set; }
+        public long IdChat { get; set; }
+        public string Nombre { get; set; }
+        public DateTime FechaRegistro { get; set; }
+    }
+}
+</file>
+
 <file path="GUI/TecladoBot.cs">
 using BLL;
 using System.Collections.Generic;
@@ -1506,7 +1613,7 @@ namespace GUI
 
         public InlineKeyboardMarkup ObtenerInlineCategorias()
         {
-            var categorias = _servicioCategoria.ListarTodas();
+            var categorias = _servicioCategoria.ObtenerTodos();
             var filas = new List<InlineKeyboardButton[]>();
 
             for (int i = 0; i < categorias.Count; i += 2)
@@ -1611,141 +1718,6 @@ namespace GUI
 }
 </file>
 
-<file path="ENTITY/Calificacion.cs">
-using System;
-
-namespace ENTITY
-{
-    public class Calificacion
-    {
-        public int IdCalificacion { get; set; }
-        public int Puntaje { get; set; }
-        public DateTime FechaRegistro { get; set; }
-        public int IdProducto { get; set; }
-        public int IdSupermercado { get; set; }
-        public int IdUsuario { get; set; }
-    }
-}
-</file>
-
-<file path="ENTITY/Categoria.cs">
-using System;
-
-namespace ENTITY
-{
-    public class Categoria
-    {
-        public int IdCategoria { get; set; }
-        public string Nombre { get; set; }
-        public string Emoji { get; set; }
-        public DateTime FechaRegistro { get; set; }
-    }
-}
-</file>
-
-<file path="ENTITY/Precio.cs">
-using System;
-
-namespace ENTITY
-{
-    public class Precio
-    {
-        public int IdPrecio { get; set; }
-        public decimal Valor { get; set; }
-        public DateTime FechaRegistro { get; set; }
-        public string Fuente { get; set; }
-        public int IdProducto { get; set; }
-        public int IdSupermercado { get; set; }
-    }
-}
-</file>
-
-<file path="ENTITY/PrecioDetalle.cs">
-using System;
-
-namespace ENTITY
-{
-    public class PrecioDetalle
-    {
-        public int IdPrecio { get; set; }
-        public decimal Valor { get; set; }
-        public DateTime FechaRegistro { get; set; }
-        public string Fuente { get; set; }
-        public int IdProducto { get; set; }
-        public int IdSupermercado { get; set; }
-        public string NombreSupermercado { get; set; }
-    }
-}
-</file>
-
-<file path="ENTITY/Supermercado.cs">
-using System;
-
-namespace ENTITY
-{
-    public class Supermercado
-    {
-        public int IdSupermercado { get; set; }
-        public string Nombre { get; set; }
-        public string Ciudad { get; set; }
-        public int Activo { get; set; }
-        public DateTime FechaRegistro { get; set; }
-    }
-}
-</file>
-
-<file path="ENTITY/Usuario.cs">
-using System;
-
-namespace ENTITY
-{
-    public class Usuario
-    {
-        public int IdUsuario { get; set; }
-        public long IdChat { get; set; }
-        public string Nombre { get; set; }
-        public DateTime FechaRegistro { get; set; }
-    }
-}
-</file>
-
-<file path="GUI/App.config">
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-    <startup> 
-        <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.8" />
-    </startup>
-  <runtime>
-    <assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
-      <dependentAssembly>
-        <assemblyIdentity name="System.Runtime.CompilerServices.Unsafe" publicKeyToken="b03f5f7f11d50a3a" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-6.0.0.0" newVersion="6.0.0.0" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Text.Json" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-8.0.0.5" newVersion="8.0.0.5" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Memory" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-4.0.1.2" newVersion="4.0.1.2" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Buffers" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-4.0.3.0" newVersion="4.0.3.0" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Threading.Tasks.Extensions" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-4.2.0.1" newVersion="4.2.0.1" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Formats.Asn1" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-8.0.0.1" newVersion="8.0.0.1" />
-      </dependentAssembly>
-    </assemblyBinding>
-  </runtime>
-</configuration>
-</file>
-
 <file path="BLL/app.config">
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -1784,50 +1756,6 @@ namespace ENTITY
 </configuration>
 </file>
 
-<file path="BLL/ServicioSupermercado.cs">
-using DAL;
-using ENTITY;
-using System.Collections.Generic;
-
-namespace BLL
-{
-    public class ServicioSupermercado
-    {
-        private readonly IRepositorioSupermercado _repositorio;
-
-        public ServicioSupermercado(IRepositorioSupermercado repositorio)
-        {
-            _repositorio = repositorio;
-        }
-
-        public void Insertar(string nombre, string ciudad)
-        {
-            _repositorio.Insertar(nombre, ciudad);
-        }
-
-        public List<Supermercado> ListarTodos()
-        {
-            return _repositorio.ListarTodos();
-        }
-
-        public List<Supermercado> ListarActivos()
-        {
-            return _repositorio.ListarActivos();
-        }
-
-        public Supermercado BuscarPorId(int idSupermercado)
-        {
-            return _repositorio.BuscarPorId(idSupermercado);
-        }
-
-        public void ActualizarActivo(int idSupermercado, int activo)
-        {
-            _repositorio.ActualizarActivo(idSupermercado, activo);
-        }
-    }
-}
-</file>
-
 <file path="BLL/ServicioUsuario.cs">
 using DAL;
 using ENTITY;
@@ -1856,21 +1784,201 @@ namespace BLL
 }
 </file>
 
+<file path="GUI/App.config">
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+    <startup> 
+        <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.8" />
+    </startup>
+  <runtime>
+    <assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
+      <dependentAssembly>
+        <assemblyIdentity name="System.Runtime.CompilerServices.Unsafe" publicKeyToken="b03f5f7f11d50a3a" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-6.0.0.0" newVersion="6.0.0.0" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Text.Json" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-8.0.0.5" newVersion="8.0.0.5" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Memory" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-4.0.1.2" newVersion="4.0.1.2" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Buffers" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-4.0.3.0" newVersion="4.0.3.0" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Threading.Tasks.Extensions" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-4.2.0.1" newVersion="4.2.0.1" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Formats.Asn1" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-8.0.0.1" newVersion="8.0.0.1" />
+      </dependentAssembly>
+    </assemblyBinding>
+  </runtime>
+
+	<connectionStrings>
+		<add name="OracleDB"
+			 connectionString="Data Source=localhost:1521/XEPDB1;User Id=carlos;Password=carlos123;"
+			 providerName="Oracle.ManagedDataAccess.Client"/>
+	</connectionStrings>
+
+	<appSettings>
+		<add key="TelegramToken" value="8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74"/>
+	</appSettings>
+	
+</configuration>
+</file>
+
+<file path="GUI/packages.config">
+<?xml version="1.0" encoding="utf-8"?>
+<packages>
+  <package id="IndexRange" version="1.0.3" targetFramework="net48" />
+  <package id="Microsoft.Bcl.AsyncInterfaces" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Configuration.Abstractions" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Configuration.Binder" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.DependencyInjection.Abstractions" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Options" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Options.ConfigurationExtensions" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Primitives" version="8.0.0" targetFramework="net48" />
+  <package id="System.Buffers" version="4.5.1" targetFramework="net48" />
+  <package id="System.ComponentModel.Annotations" version="5.0.0" targetFramework="net48" />
+  <package id="System.Memory" version="4.5.5" targetFramework="net48" />
+  <package id="System.Numerics.Vectors" version="4.5.0" targetFramework="net48" />
+  <package id="System.Runtime.CompilerServices.Unsafe" version="6.0.0" targetFramework="net48" />
+  <package id="System.Text.Encodings.Web" version="8.0.0" targetFramework="net48" />
+  <package id="System.Text.Json" version="8.0.5" targetFramework="net48" />
+  <package id="System.Threading.Tasks.Extensions" version="4.5.4" targetFramework="net48" />
+  <package id="System.ValueTuple" version="4.5.0" targetFramework="net48" />
+  <package id="Telegram.Bot" version="22.10.0" targetFramework="net48" />
+</packages>
+</file>
+
+<file path="BLL/packages.config">
+<?xml version="1.0" encoding="utf-8"?>
+<packages>
+  <package id="IndexRange" version="1.0.3" targetFramework="net48" />
+  <package id="Microsoft.Bcl.AsyncInterfaces" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Configuration.Abstractions" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Configuration.Binder" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.DependencyInjection.Abstractions" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Options" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Options.ConfigurationExtensions" version="8.0.0" targetFramework="net48" />
+  <package id="Microsoft.Extensions.Primitives" version="8.0.0" targetFramework="net48" />
+  <package id="Newtonsoft.Json" version="13.0.1" targetFramework="net48" />
+  <package id="System.Buffers" version="4.5.1" targetFramework="net48" />
+  <package id="System.ComponentModel.Annotations" version="5.0.0" targetFramework="net48" />
+  <package id="System.Memory" version="4.5.5" targetFramework="net48" />
+  <package id="System.Numerics.Vectors" version="4.5.0" targetFramework="net48" />
+  <package id="System.Runtime.CompilerServices.Unsafe" version="6.0.0" targetFramework="net48" />
+  <package id="System.Text.Encodings.Web" version="8.0.0" targetFramework="net48" />
+  <package id="System.Text.Json" version="8.0.5" targetFramework="net48" />
+  <package id="System.Threading.Tasks.Extensions" version="4.5.4" targetFramework="net48" />
+  <package id="System.ValueTuple" version="4.5.0" targetFramework="net48" />
+</packages>
+</file>
+
+<file path="BLL/ServicioCalificacion.cs">
+using DAL;
+using System;
+
+namespace BLL
+{
+    public class ServicioCalificacion : IServicioCalificacion
+    {
+        private readonly IRepositorioCalificacion _repositorio;
+
+        public ServicioCalificacion(IRepositorioCalificacion repositorio)
+        {
+            _repositorio = repositorio;
+        }
+
+        public void Insertar(int puntaje, int idProducto, int idSupermercado, int idUsuario)
+        {
+            try
+            {
+                _repositorio.Insertar(puntaje, idProducto, idSupermercado, idUsuario);
+            }
+            catch (Exception ex)
+            {
+                // Relanzar con mensaje amigable para el bot
+                throw new Exception(ex.Message.Contains("20013")
+                    ? "Ya calificaste este producto en este supermercado."
+                    : "Error al guardar la calificación.");
+            }
+        }
+
+        public double ObtenerPromedio(int idProducto, int idSupermercado)
+        {
+            return _repositorio.ObtenerPromedio(idProducto, idSupermercado);
+        }
+
+        public int ObtenerTotalVotos(int idProducto, int idSupermercado)
+        {
+            return _repositorio.ObtenerTotalVotos(idProducto, idSupermercado);
+        }
+    }
+}
+</file>
+
+<file path="BLL/ServicioSupermercado.cs">
+using DAL;
+using ENTITY;
+using System.Collections.Generic;
+
+namespace BLL
+{
+    public class ServicioSupermercado
+    {
+        private readonly IRepositorioSupermercado _repositorio;
+
+        public ServicioSupermercado(IRepositorioSupermercado repositorio)
+        {
+            _repositorio = repositorio;
+        }
+
+        public void Insertar(string nombre, string ciudad)
+        {
+            _repositorio.Insertar(nombre, ciudad);
+        }
+
+        public List<Supermercado> ObtenerTodos()
+        {
+            return _repositorio.ObtenerTodos();
+        }
+
+        public List<Supermercado> ListarActivos()
+        {
+            return _repositorio.ListarActivos();
+        }
+
+        public Supermercado BuscarPorId(int idSupermercado)
+        {
+            return _repositorio.BuscarPorId(idSupermercado);
+        }
+
+        public void ActualizarActivo(int idSupermercado, int activo)
+        {
+            _repositorio.ActualizarActivo(idSupermercado, activo);
+        }
+    }
+}
+</file>
+
 <file path="DAL/Conexion.cs">
 using Oracle.ManagedDataAccess.Client;
+using System.Configuration;
 
 namespace DAL
 {
     public class Conexion : IConexion
     {
-        private const string _cadena =
-            "User Id=carlos;" +
-            "Password=carlos123;" +
-            "Data Source=localhost:1521/XEPDB1;";
-
         public OracleConnection AbrirConexion()
         {
-            OracleConnection conexion = new OracleConnection(_cadena);
+            string cadena = ConfigurationManager.ConnectionStrings["OracleDB"].ConnectionString;
+            OracleConnection conexion = new OracleConnection(cadena);
             conexion.Open();
             return conexion;
         }
@@ -1918,7 +2026,7 @@ namespace DAL
             }
         }
 
-        public List<Supermercado> ListarTodos()
+        public List<Supermercado> ObtenerTodos()
         {
             return Listar("PKG_SUPERMERCADO.PR_LISTAR_TODOS");
         }
@@ -2023,6 +2131,7 @@ namespace DAL
 using ENTITY;
 using Oracle.ManagedDataAccess.Client;
 using System;
+using System.Collections.Generic;
 using System.Data;
 
 namespace DAL
@@ -2093,96 +2202,112 @@ namespace DAL
 
             return null;
         }
+
+        public List<Usuario> ObtenerTodos()
+        {
+            List<Usuario> lista = new List<Usuario>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_USUARIO.PR_LISTAR_TODOS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(new Usuario
+                            {
+                                IdUsuario = Convert.ToInt32(reader["id_usuario"]),
+                                IdChat = Convert.ToInt64(reader["id_chat"]),
+                                Nombre = reader["nombre"] == DBNull.Value ? "" : reader["nombre"].ToString(),
+                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
     }
 }
 </file>
 
-<file path="GUI/packages.config">
-<?xml version="1.0" encoding="utf-8"?>
-<packages>
-  <package id="IndexRange" version="1.0.3" targetFramework="net48" />
-  <package id="Microsoft.Bcl.AsyncInterfaces" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Configuration.Abstractions" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Configuration.Binder" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.DependencyInjection.Abstractions" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Options" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Options.ConfigurationExtensions" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Primitives" version="8.0.0" targetFramework="net48" />
-  <package id="System.Buffers" version="4.5.1" targetFramework="net48" />
-  <package id="System.ComponentModel.Annotations" version="5.0.0" targetFramework="net48" />
-  <package id="System.Memory" version="4.5.5" targetFramework="net48" />
-  <package id="System.Numerics.Vectors" version="4.5.0" targetFramework="net48" />
-  <package id="System.Runtime.CompilerServices.Unsafe" version="6.0.0" targetFramework="net48" />
-  <package id="System.Text.Encodings.Web" version="8.0.0" targetFramework="net48" />
-  <package id="System.Text.Json" version="8.0.5" targetFramework="net48" />
-  <package id="System.Threading.Tasks.Extensions" version="4.5.4" targetFramework="net48" />
-  <package id="System.ValueTuple" version="4.5.0" targetFramework="net48" />
-  <package id="Telegram.Bot" version="22.10.0" targetFramework="net48" />
-</packages>
+<file path="ENTITY/Producto.cs">
+namespace ENTITY
+{
+    public class Producto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Unidad { get; set; }
+        public string Emoji { get; set; }
+        public int IdCategoria { get; set; }
+        public string Comando { get; set; }
+
+        public void GenerarComando()
+        {
+            Comando = "/" + Nombre
+                          .ToLower()
+                          .Replace(" ", "")
+                          .Replace("á", "a").Replace("é", "e")
+                          .Replace("í", "i").Replace("ó", "o")
+                          .Replace("ú", "u");
+        }
+    }
+}
 </file>
 
-<file path="BLL/packages.config">
-<?xml version="1.0" encoding="utf-8"?>
-<packages>
-  <package id="IndexRange" version="1.0.3" targetFramework="net48" />
-  <package id="Microsoft.Bcl.AsyncInterfaces" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Configuration.Abstractions" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Configuration.Binder" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.DependencyInjection.Abstractions" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Options" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Options.ConfigurationExtensions" version="8.0.0" targetFramework="net48" />
-  <package id="Microsoft.Extensions.Primitives" version="8.0.0" targetFramework="net48" />
-  <package id="Newtonsoft.Json" version="13.0.1" targetFramework="net48" />
-  <package id="System.Buffers" version="4.5.1" targetFramework="net48" />
-  <package id="System.ComponentModel.Annotations" version="5.0.0" targetFramework="net48" />
-  <package id="System.Memory" version="4.5.5" targetFramework="net48" />
-  <package id="System.Numerics.Vectors" version="4.5.0" targetFramework="net48" />
-  <package id="System.Runtime.CompilerServices.Unsafe" version="6.0.0" targetFramework="net48" />
-  <package id="System.Text.Encodings.Web" version="8.0.0" targetFramework="net48" />
-  <package id="System.Text.Json" version="8.0.5" targetFramework="net48" />
-  <package id="System.Threading.Tasks.Extensions" version="4.5.4" targetFramework="net48" />
-  <package id="System.ValueTuple" version="4.5.0" targetFramework="net48" />
-</packages>
-</file>
-
-<file path="BLL/ServicioCalificacion.cs">
+<file path="BLL/ServicioPrecio.cs">
 using DAL;
-using System;
+using ENTITY;
+using System.Collections.Generic;
 
 namespace BLL
 {
-    public class ServicioCalificacion : IServicioCalificacion
+    public class ServicioPrecio : IServicioPrecio
     {
-        private readonly IRepositorioCalificacion _repositorio;
+        private readonly IRepositorioPrecio _repositorio;
 
-        public ServicioCalificacion(IRepositorioCalificacion repositorio)
+        public ServicioPrecio(IRepositorioPrecio repositorio)
         {
             _repositorio = repositorio;
         }
 
-        public void Insertar(int puntaje, int idProducto, int idSupermercado, int idUsuario)
+        public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
         {
-            try
-            {
-                _repositorio.Insertar(puntaje, idProducto, idSupermercado, idUsuario);
-            }
-            catch (Exception ex)
-            {
-                // Relanzar con mensaje amigable para el bot
-                throw new Exception(ex.Message.Contains("20013")
-                    ? "Ya calificaste este producto en este supermercado."
-                    : "Error al guardar la calificación.");
-            }
+            _repositorio.Insertar(valor, fuente, idProducto, idSupermercado);
         }
 
-        public double ObtenerPromedio(int idProducto, int idSupermercado)
+        public List<PrecioDetalle> ObtenerPrecios(int idProducto)
         {
-            return _repositorio.ObtenerPromedio(idProducto, idSupermercado);
+            return _repositorio.ListarRecientesPorProducto(idProducto);
         }
 
-        public int ObtenerTotalVotos(int idProducto, int idSupermercado)
+        public decimal ObtenerPrecioMinimo(int idProducto)
         {
-            return _repositorio.ObtenerTotalVotos(idProducto, idSupermercado);
+            return _repositorio.ObtenerPrecioMinimo(idProducto);
+        }
+
+        public decimal ObtenerPrecioMaximo(int idProducto)
+        {
+            return _repositorio.ObtenerPrecioMaximo(idProducto);
+        }
+
+        public decimal ObtenerPrecioPromedio(int idProducto)
+        {
+            return _repositorio.ObtenerPrecioPromedio(idProducto);
+        }
+
+        public string ObtenerSupermercadoMasBarato(int idProducto)
+        {
+            return _repositorio.ObtenerSupermercadoMasBarato(idProducto);
         }
     }
 }
@@ -2254,6 +2379,41 @@ namespace DAL
                     {
                         Value = idSupermercado
                     });
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(new Calificacion
+                            {
+                                IdCalificacion = Convert.ToInt32(reader["id_calificacion"]),
+                                Puntaje = Convert.ToInt32(reader["puntaje"]),
+                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"]),
+                                IdProducto = Convert.ToInt32(reader["id_producto"]),
+                                IdSupermercado = Convert.ToInt32(reader["id_supermercado"]),
+                                IdUsuario = Convert.ToInt32(reader["id_usuario"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
+
+        public List<Calificacion> ObtenerTodos()
+        {
+            List<Calificacion> lista = new List<Calificacion>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_CALIFICACION.PR_LISTAR_TODOS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
                     {
                         Direction = ParameterDirection.Output
@@ -2424,6 +2584,41 @@ namespace DAL
             return lista;
         }
 
+        public List<Precio> ObtenerTodos()
+        {
+            List<Precio> lista = new List<Precio>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_PRECIO.PR_LISTAR_TODOS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(new Precio
+                            {
+                                IdPrecio = Convert.ToInt32(reader["id_precio"]),
+                                Valor = Convert.ToDecimal(reader["valor"]),
+                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"]),
+                                Fuente = reader["fuente"] == DBNull.Value ? "" : reader["fuente"].ToString(),
+                                IdProducto = Convert.ToInt32(reader["id_producto"]),
+                                IdSupermercado = Convert.ToInt32(reader["id_supermercado"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
+
         public decimal ObtenerPrecioMinimo(int idProducto)
         {
             return EjecutarFuncionDecimal(
@@ -2487,204 +2682,6 @@ namespace DAL
                     return Convert.ToDecimal(cmd.Parameters["resultado"].Value.ToString());
                 }
             }
-        }
-    }
-}
-</file>
-
-<file path="ENTITY/Producto.cs">
-namespace ENTITY
-{
-    public class Producto
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; }
-        public string Unidad { get; set; }
-        public string Emoji { get; set; }
-        public int IdCategoria { get; set; }
-        public string Comando { get; set; }
-
-        public void GenerarComando()
-        {
-            Comando = "/" + Nombre
-                          .ToLower()
-                          .Replace(" ", "")
-                          .Replace("á", "a").Replace("é", "e")
-                          .Replace("í", "i").Replace("ó", "o")
-                          .Replace("ú", "u");
-        }
-    }
-}
-</file>
-
-<file path="GUI/GUI.csproj">
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{472A1B4B-B7BB-440D-BCC0-FB52FC48A267}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>GUI</RootNamespace>
-    <AssemblyName>GUI</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Deterministic>true</Deterministic>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="IndexRange, Version=1.0.3.0, Culture=neutral, PublicKeyToken=35e6a3c4212514c6, processorArchitecture=MSIL">
-      <HintPath>..\packages\IndexRange.1.0.3\lib\net47\IndexRange.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Configuration.Abstractions.8.0.0\lib\net462\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Binder, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Configuration.Binder.8.0.0\lib\net462\Microsoft.Extensions.Configuration.Binder.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.8.0.0\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Options, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Options.8.0.0\lib\net462\Microsoft.Extensions.Options.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Options.ConfigurationExtensions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Options.ConfigurationExtensions.8.0.0\lib\net462\Microsoft.Extensions.Options.ConfigurationExtensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Primitives.8.0.0\lib\net462\Microsoft.Extensions.Primitives.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ComponentModel.Annotations, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ComponentModel.Annotations.5.0.0\lib\net461\System.ComponentModel.Annotations.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Json, Version=8.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Json.8.0.5\lib\net462\System.Text.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-    <Reference Include="Telegram.Bot, Version=22.10.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Telegram.Bot.22.10.0\lib\netstandard2.0\Telegram.Bot.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TecladoBot.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\BLL\BLL.csproj">
-      <Project>{092e2e4d-155c-4f36-b279-515e4448f8f1}</Project>
-      <Name>BLL</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ENTITY\ENTITY.csproj">
-      <Project>{e333f683-04c0-4c96-8518-106cbe62da2b}</Project>
-      <Name>ENTITY</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-</Project>
-</file>
-
-<file path="BLL/ServicioPrecio.cs">
-using DAL;
-using ENTITY;
-using System.Collections.Generic;
-
-namespace BLL
-{
-    public class ServicioPrecio : IServicioPrecio
-    {
-        private readonly IRepositorioPrecio _repositorio;
-
-        public ServicioPrecio(IRepositorioPrecio repositorio)
-        {
-            _repositorio = repositorio;
-        }
-
-        public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
-        {
-            _repositorio.Insertar(valor, fuente, idProducto, idSupermercado);
-        }
-
-        public List<PrecioDetalle> ObtenerPrecios(int idProducto)
-        {
-            return _repositorio.ListarRecientesPorProducto(idProducto);
-        }
-
-        public decimal ObtenerPrecioMinimo(int idProducto)
-        {
-            return _repositorio.ObtenerPrecioMinimo(idProducto);
-        }
-
-        public decimal ObtenerPrecioMaximo(int idProducto)
-        {
-            return _repositorio.ObtenerPrecioMaximo(idProducto);
-        }
-
-        public decimal ObtenerPrecioPromedio(int idProducto)
-        {
-            return _repositorio.ObtenerPrecioPromedio(idProducto);
-        }
-
-        public string ObtenerSupermercadoMasBarato(int idProducto)
-        {
-            return _repositorio.ObtenerSupermercadoMasBarato(idProducto);
         }
     }
 }
@@ -2818,6 +2815,131 @@ namespace DAL
 }
 </file>
 
+<file path="GUI/GUI.csproj">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{472A1B4B-B7BB-440D-BCC0-FB52FC48A267}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>GUI</RootNamespace>
+    <AssemblyName>GUI</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="IndexRange, Version=1.0.3.0, Culture=neutral, PublicKeyToken=35e6a3c4212514c6, processorArchitecture=MSIL">
+      <HintPath>..\packages\IndexRange.1.0.3\lib\net47\IndexRange.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Configuration.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Configuration.Abstractions.8.0.0\lib\net462\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Configuration.Binder, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Configuration.Binder.8.0.0\lib\net462\Microsoft.Extensions.Configuration.Binder.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.8.0.0\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Options, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Options.8.0.0\lib\net462\Microsoft.Extensions.Options.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Options.ConfigurationExtensions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Options.ConfigurationExtensions.8.0.0\lib\net462\Microsoft.Extensions.Options.ConfigurationExtensions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Primitives.8.0.0\lib\net462\Microsoft.Extensions.Primitives.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Annotations, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ComponentModel.Annotations.5.0.0\lib\net461\System.ComponentModel.Annotations.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=8.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.8.0.5\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Telegram.Bot, Version=22.10.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Telegram.Bot.22.10.0\lib\netstandard2.0\Telegram.Bot.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TecladoBot.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BLL\BLL.csproj">
+      <Project>{092e2e4d-155c-4f36-b279-515e4448f8f1}</Project>
+      <Name>BLL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ENTITY\ENTITY.csproj">
+      <Project>{e333f683-04c0-4c96-8518-106cbe62da2b}</Project>
+      <Name>ENTITY</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
+</file>
+
 <file path="ENTITY/ENTITY.csproj">
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -2870,126 +2992,6 @@ namespace DAL
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Supermercado.cs" />
     <Compile Include="Usuario.cs" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-</Project>
-</file>
-
-<file path="DAL/DAL.csproj">
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9FF30F83-23F9-4EEC-A4D2-BA418E47B4F6}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DAL</RootNamespace>
-    <AssemblyName>DAL</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="Oracle.ManagedDataAccess, Version=4.122.21.1, Culture=neutral, PublicKeyToken=89b483f429c47342, processorArchitecture=MSIL">
-      <HintPath>..\packages\Oracle.ManagedDataAccess.21.15.0\lib\net462\Oracle.ManagedDataAccess.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Collections.Immutable, Version=10.0.0.3, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Collections.Immutable.10.0.3\lib\net462\System.Collections.Immutable.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Core" />
-    <Reference Include="System.Diagnostics.DiagnosticSource, Version=6.0.0.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Diagnostics.DiagnosticSource.6.0.2\lib\net461\System.Diagnostics.DiagnosticSource.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Formats.Asn1, Version=8.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Formats.Asn1.8.0.1\lib\net462\System.Formats.Asn1.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Json, Version=8.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Json.8.0.5\lib\net462\System.Text.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.6.0\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Conexion.cs" />
-    <Compile Include="IConexion.cs" />
-    <Compile Include="IRepositorioCalificacion.cs" />
-    <Compile Include="IRepositorioCategoria.cs" />
-    <Compile Include="IRepositorioPrecio.cs" />
-    <Compile Include="IRepositorioProducto.cs" />
-    <Compile Include="IRepositorioSupermercado.cs" />
-    <Compile Include="IRepositorioUsuario.cs" />
-    <Compile Include="RepositorioCalificacion.cs" />
-    <Compile Include="RepositorioCategoria.cs" />
-    <Compile Include="RepositorioPrecio.cs" />
-    <Compile Include="RepositorioProducto.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RepositorioSupermercado.cs" />
-    <Compile Include="RepositorioUsuario.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ENTITY\ENTITY.csproj">
-      <Project>{e333f683-04c0-4c96-8518-106cbe62da2b}</Project>
-      <Name>ENTITY</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-    <None Include="Oracle.DataAccess.Common.Configuration.Section.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Oracle.ManagedDataAccess.Client.Configuration.Section.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
@@ -3111,6 +3113,258 @@ namespace BLL
 }
 </file>
 
+<file path="DAL/DAL.csproj">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9FF30F83-23F9-4EEC-A4D2-BA418E47B4F6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DAL</RootNamespace>
+    <AssemblyName>DAL</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Oracle.ManagedDataAccess, Version=4.122.21.1, Culture=neutral, PublicKeyToken=89b483f429c47342, processorArchitecture=MSIL">
+      <HintPath>..\packages\Oracle.ManagedDataAccess.21.15.0\lib\net462\Oracle.ManagedDataAccess.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Immutable, Version=10.0.0.3, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Collections.Immutable.10.0.3\lib\net462\System.Collections.Immutable.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Diagnostics.DiagnosticSource, Version=6.0.0.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Diagnostics.DiagnosticSource.6.0.2\lib\net461\System.Diagnostics.DiagnosticSource.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Formats.Asn1, Version=8.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Formats.Asn1.8.0.1\lib\net462\System.Formats.Asn1.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=8.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.8.0.5\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.6.0\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Conexion.cs" />
+    <Compile Include="IConexion.cs" />
+    <Compile Include="IRepositorio.cs" />
+    <Compile Include="IRepositorioCalificacion.cs" />
+    <Compile Include="IRepositorioCategoria.cs" />
+    <Compile Include="IRepositorioPrecio.cs" />
+    <Compile Include="IRepositorioProducto.cs" />
+    <Compile Include="IRepositorioSupermercado.cs" />
+    <Compile Include="IRepositorioUsuario.cs" />
+    <Compile Include="RepositorioCalificacion.cs" />
+    <Compile Include="RepositorioCategoria.cs" />
+    <Compile Include="RepositorioPrecio.cs" />
+    <Compile Include="RepositorioProducto.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RepositorioSupermercado.cs" />
+    <Compile Include="RepositorioUsuario.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ENTITY\ENTITY.csproj">
+      <Project>{e333f683-04c0-4c96-8518-106cbe62da2b}</Project>
+      <Name>ENTITY</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="Oracle.DataAccess.Common.Configuration.Section.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Oracle.ManagedDataAccess.Client.Configuration.Section.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
+</file>
+
+<file path="BLL/BLL.csproj">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{092E2E4D-155C-4F36-B279-515E4448F8F1}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BLL</RootNamespace>
+    <AssemblyName>BLL</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="IndexRange, Version=1.0.3.0, Culture=neutral, PublicKeyToken=35e6a3c4212514c6, processorArchitecture=MSIL">
+      <HintPath>..\packages\IndexRange.1.0.3\lib\net47\IndexRange.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Configuration.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Configuration.Abstractions.8.0.0\lib\net462\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Configuration.Binder, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Configuration.Binder.8.0.0\lib\net462\Microsoft.Extensions.Configuration.Binder.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.8.0.0\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Options, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Options.8.0.0\lib\net462\Microsoft.Extensions.Options.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Options.ConfigurationExtensions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Options.ConfigurationExtensions.8.0.0\lib\net462\Microsoft.Extensions.Options.ConfigurationExtensions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Primitives.8.0.0\lib\net462\Microsoft.Extensions.Primitives.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Annotations, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ComponentModel.Annotations.5.0.0\lib\net461\System.ComponentModel.Annotations.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=8.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.8.0.5\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="FabricaServicios.cs" />
+    <Compile Include="IServicioCalificacion.cs" />
+    <Compile Include="IServicioCategoria.cs" />
+    <Compile Include="IServicioPrecio.cs" />
+    <Compile Include="ServicioCalificacion.cs" />
+    <Compile Include="ServicioCategoria.cs" />
+    <Compile Include="ServicioPrecio.cs" />
+    <Compile Include="ServicioProducto.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServicioSupermercado.cs" />
+    <Compile Include="ServicioUsuario.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DAL\DAL.csproj">
+      <Project>{9ff30f83-23f9-4eec-a4d2-ba418e47b4f6}</Project>
+      <Name>DAL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ENTITY\ENTITY.csproj">
+      <Project>{e333f683-04c0-4c96-8518-106cbe62da2b}</Project>
+      <Name>ENTITY</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
+</file>
+
 <file path="GUI/Program.cs">
 using BLL;
 using System;
@@ -3122,6 +3376,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using System.Configuration;
 
 namespace GUI
 {
@@ -3140,9 +3395,11 @@ namespace GUI
                 FabricaServicios.CrearServicioPrecio(),
                 FabricaServicios.CrearServicioCategoria()
             );
-
-            string token = "8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74";
+            string token = ConfigurationManager.AppSettings["TelegramToken"];
             _bot = new TelegramBotClient(token);
+
+            //string token = "8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74";
+            //_bot = new TelegramBotClient(token);
 
             var cts = new CancellationTokenSource();
 
@@ -3410,136 +3667,6 @@ namespace GUI
         }
     }
 }
-</file>
-
-<file path="BLL/BLL.csproj">
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{092E2E4D-155C-4F36-B279-515E4448F8F1}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BLL</RootNamespace>
-    <AssemblyName>BLL</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="IndexRange, Version=1.0.3.0, Culture=neutral, PublicKeyToken=35e6a3c4212514c6, processorArchitecture=MSIL">
-      <HintPath>..\packages\IndexRange.1.0.3\lib\net47\IndexRange.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Configuration.Abstractions.8.0.0\lib\net462\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Binder, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Configuration.Binder.8.0.0\lib\net462\Microsoft.Extensions.Configuration.Binder.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.8.0.0\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Options, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Options.8.0.0\lib\net462\Microsoft.Extensions.Options.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Options.ConfigurationExtensions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Options.ConfigurationExtensions.8.0.0\lib\net462\Microsoft.Extensions.Options.ConfigurationExtensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Extensions.Primitives.8.0.0\lib\net462\Microsoft.Extensions.Primitives.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ComponentModel.Annotations, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ComponentModel.Annotations.5.0.0\lib\net461\System.ComponentModel.Annotations.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Encodings.Web.8.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Json, Version=8.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Text.Json.8.0.5\lib\net462\System.Text.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="FabricaServicios.cs" />
-    <Compile Include="IServicioCalificacion.cs" />
-    <Compile Include="IServicioCategoria.cs" />
-    <Compile Include="IServicioPrecio.cs" />
-    <Compile Include="ServicioCalificacion.cs" />
-    <Compile Include="ServicioCategoria.cs" />
-    <Compile Include="ServicioPrecio.cs" />
-    <Compile Include="ServicioProducto.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServicioSupermercado.cs" />
-    <Compile Include="ServicioUsuario.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DAL\DAL.csproj">
-      <Project>{9ff30f83-23f9-4eec-a4d2-ba418e47b4f6}</Project>
-      <Name>DAL</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ENTITY\ENTITY.csproj">
-      <Project>{e333f683-04c0-4c96-8518-106cbe62da2b}</Project>
-      <Name>ENTITY</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="app.config" />
-    <None Include="packages.config" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-</Project>
 </file>
 
 </files>

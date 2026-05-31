@@ -1,5 +1,9 @@
 ﻿using BLL;
 using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -8,7 +12,6 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using System.Configuration;
 
 namespace GUI
 {
@@ -18,7 +21,12 @@ namespace GUI
         private static ServicioProducto _servicioProducto = FabricaServicios.CrearServicioProducto();
         private static ServicioUsuario _servicioUsuario = FabricaServicios.CrearServicioUsuario();
         private static ServicioCalificacion _servicioCalificacion = FabricaServicios.CrearServicioCalificacion();
+
         private static TecladoBot _tecladoBot;
+        private static HashSet<long> _esperandoIA = new HashSet<long>();
+        private static readonly string _geminiKey = ConfigurationManager.AppSettings["GroqApiKey"];
+        private static readonly HttpClient _httpClient = new HttpClient();
+        //private static HashSet<long> _esperandoIA = new HashSet<long>();
 
         static void Main(string[] args)
         {
@@ -76,6 +84,10 @@ namespace GUI
                         replyMarkup: _tecladoBot.ObtenerInlineCategorias(),
                         cancellationToken: ct
                     );
+                }
+                else if (_esperandoIA.Contains(chatId)) // lo vemos luego
+                {
+                    await ProcesarConsultaIA(bot, chatId, texto, ct);
                 }
                 else
                 {
@@ -189,6 +201,7 @@ namespace GUI
                 // ── Menú principal desde categoría (edita el mensaje actual) ──
                 else if (data == "menu_principal")
                 {
+                    _esperandoIA.Remove(chatId);
                     try
                     {
                         await bot.EditMessageText(
@@ -285,6 +298,26 @@ namespace GUI
                         );
                     }
                 }
+                
+                else if (data == "menu_ia")
+                {
+                    _esperandoIA.Add(chatId);
+                    await bot.EditMessageText(
+                        chatId: chatId,
+                        messageId: messageId,
+                        text: "🤖 *Asistente IA de compras*\n\n" +
+                              "Puedes enviarme:\n" +
+                              "📋 Una *lista de productos* — te digo dónde comprar más barato.\n" +
+                              "🍽️ Una *receta* — te explico cómo hacerla y te doy los mejores precios.\n\n" +
+                              "✍️ Escribe tu consulta:",
+                        parseMode: ParseMode.Markdown,
+                        replyMarkup: new InlineKeyboardMarkup(new[]
+                        {
+            new[] { InlineKeyboardButton.WithCallbackData("🔙 Volver", "menu_principal") }
+                        }),
+                        cancellationToken: ct
+                    );
+                }
             }
         }
 
@@ -297,5 +330,165 @@ namespace GUI
 
             return Task.CompletedTask;
         }
+
+        static async Task ProcesarConsultaIA(ITelegramBotClient bot, long chatId, string texto, CancellationToken ct)
+        {
+            _esperandoIA.Remove(chatId);
+
+            await bot.SendMessage(
+                chatId: chatId,
+                text: "⏳ Consultando con IA...",
+                cancellationToken: ct
+            );
+
+            try
+            {
+                var prompt = $@"El usuario escribió: ""{texto}""
+
+Analiza si es una RECETA o una LISTA DE PRODUCTOS.
+
+Responde SOLO en JSON con este formato exacto, sin texto extra, sin bloques de código:
+
+Si es receta:
+{{
+   ""tipo"": ""receta"",
+  ""nombre"": ""Nombre del plato"",
+  ""pasos"": [""Paso 1 detallado"", ""Paso 2 detallado"", ""Paso 3 detallado"", ""Paso 4 detallado"", ""Paso 5 detallado""],
+  ""ingredientes"": [""Arroz"", ""Pollo"", ""Aceite Vegetal""]
+}}
+
+Si es lista:
+{{
+  ""tipo"": ""lista"",
+  ""ingredientes"": [""Leche Entera"", ""Pasta"", ""Frijoles""]
+}}
+
+Reglas importantes:
+- Los pasos deben ser detallados y específicos para esta receta, mínimo 5 pasos, máximo 8.
+- Solo incluye en ingredientes los productos estrictamente necesarios para la receta. No agregues ingredientes genéricos como aceite, sal o pimienta a menos que la receta los requiera de forma esencial.
+- Los ingredientes deben coincidir exactamente con estos nombres disponibles:
+Arroz, Maíz, Frijoles, Lentejas, Pasta, Aceite Vegetal, Aceite de Maíz, Margarina, Mantequilla,
+Pollo, Res, Cerdo, Pescado, Mortadela, Leche Entera, Leche Deslactosada, Leche en Polvo,
+Yogur, Queso Costeño, Crema de Leche, Suero Costeño, Agua Botellada, Gaseosa, Jugo Natural,
+Jugo en Caja, Café Molido, Café Instantáneo, Chocolate en Polvo, Jabón de Baño, Shampoo,
+Jabón Líquido, Detergente en Polvo, Detergente Líquido, Suavizante de Ropa, Blanqueador,
+Desinfectante, Papel Higiénico, Toallas de Cocina, Pasta Dental, Desodorante";
+
+                // ── 1. Llamar a Groq ──────────────────────────────
+                var body = new
+                {
+                    model = "llama-3.1-8b-instant",
+                    messages = new[]
+                    {
+        new { role = "user", content = prompt }
+    },
+                    temperature = 0.3
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(body);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_geminiKey}");
+
+                var url = "https://api.groq.com/openai/v1/chat/completions";
+                var response = await _httpClient.PostAsync(url, content);
+                var responseStr = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine("=== GROQ RESPONSE ===");
+                Console.WriteLine(responseStr);
+                Console.WriteLine("=====================");
+
+                // ── 2. Extraer texto de Groq ─────────────────────
+                string textoIA;
+                using (var doc = System.Text.Json.JsonDocument.Parse(responseStr))
+                {
+                    textoIA = doc.RootElement
+                        .GetProperty("choices")[0]
+                        .GetProperty("message")
+                        .GetProperty("content")
+                        .GetString();
+                }
+
+                // Limpiar posibles backticks
+                textoIA = textoIA.Trim().Replace("```json", "").Replace("```", "").Trim();
+
+                // ── Parsear JSON de Gemini ───────────────────────────
+                string tipo;
+                List<string> ingredientes;
+                string nombreReceta = null;
+                List<string> pasos = null;
+
+                using (var resultado = System.Text.Json.JsonDocument.Parse(textoIA))
+                {
+                    tipo = resultado.RootElement.GetProperty("tipo").GetString();
+                    ingredientes = resultado.RootElement.GetProperty("ingredientes")
+                        .EnumerateArray()
+                        .Select(e => e.GetString())
+                        .ToList();
+
+                    if (tipo == "receta")
+                    {
+                        nombreReceta = resultado.RootElement.GetProperty("nombre").GetString();
+                        pasos = resultado.RootElement.GetProperty("pasos")
+                            .EnumerateArray()
+                            .Select(e => e.GetString())
+                            .ToList();
+                    }
+                }
+
+                // ── Consultar Oracle ─────────────────────────────────
+                var servicioPrecio = FabricaServicios.CrearServicioPrecio();
+                var sb = new System.Text.StringBuilder();
+
+                if (tipo == "receta")
+                {
+                    sb.AppendLine($"🍽️ *{nombreReceta}*\n");
+                    sb.AppendLine("📝 *Preparación:*");
+                    for (int i = 0; i < pasos.Count; i++)
+                        sb.AppendLine($"{i + 1}. {pasos[i]}");
+                    sb.AppendLine();
+                }
+
+                sb.AppendLine("🛒 *Mejores precios disponibles:*\n");
+
+                foreach (var ingrediente in ingredientes)
+                {
+                    try
+                    {
+                        var detalle = servicioPrecio.ObtenerPrecioMinimoConSupermercado(ingrediente);
+                        if (detalle != null)
+                            sb.AppendLine($"• *{ingrediente}*: ${detalle.Valor:N0} en {detalle.NombreSupermercado}");
+                        else
+                            sb.AppendLine($"• *{ingrediente}*: sin precio registrado");
+                    }
+                    catch
+                    {
+                        sb.AppendLine($"• *{ingrediente}*: sin precio registrado");
+                    }
+                }
+
+                await bot.SendMessage(
+                    chatId: chatId,
+                    text: sb.ToString(),
+                    parseMode: ParseMode.Markdown,
+                    replyMarkup: new InlineKeyboardMarkup(new[]
+                    {
+                new[] { InlineKeyboardButton.WithCallbackData("🤖 Nueva consulta IA", "menu_ia") },
+                new[] { InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo") }
+                    }),
+                    cancellationToken: ct
+                );
+            }
+            catch (Exception ex)
+            {
+                await bot.SendMessage(
+                    chatId: chatId,
+                    text: $"⚠️ Error procesando tu consulta: {ex.Message}",
+                    cancellationToken: ct
+                );
+            }
+        }
+
     }
 }

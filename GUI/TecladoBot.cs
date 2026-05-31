@@ -48,6 +48,10 @@ namespace GUI
                     });
                 }
             }
+            filas.Add(new[]
+   {
+        InlineKeyboardButton.WithCallbackData("🤖 Asistente IA", "menu_ia")
+    });
 
             return new InlineKeyboardMarkup(filas);
         }
@@ -123,4 +127,8 @@ namespace GUI
             return new InlineKeyboardMarkup(filas);
         }
     }
+        
+
+
+
 }

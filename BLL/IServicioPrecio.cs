@@ -11,5 +11,7 @@ namespace BLL
         decimal ObtenerPrecioMaximo(int idProducto);
         decimal ObtenerPrecioPromedio(int idProducto);
         string ObtenerSupermercadoMasBarato(int idProducto);
+
+        PrecioDetalle ObtenerPrecioMinimoConSupermercado(string nombreProducto);
     }
 }

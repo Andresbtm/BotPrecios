@@ -298,13 +298,12 @@ namespace GUI
                         );
                     }
                 }
-                
+
                 else if (data == "menu_ia")
                 {
                     _esperandoIA.Add(chatId);
-                    await bot.EditMessageText(
+                    await bot.SendMessage(
                         chatId: chatId,
-                        messageId: messageId,
                         text: "🤖 *Asistente IA de compras*\n\n" +
                               "Puedes enviarme:\n" +
                               "📋 Una *lista de productos* — te digo dónde comprar más barato.\n" +
@@ -313,7 +312,7 @@ namespace GUI
                         parseMode: ParseMode.Markdown,
                         replyMarkup: new InlineKeyboardMarkup(new[]
                         {
-            new[] { InlineKeyboardButton.WithCallbackData("🔙 Volver", "menu_principal") }
+            new[] { InlineKeyboardButton.WithCallbackData("🔙 Volver al menú", "menu_nuevo") }
                         }),
                         cancellationToken: ct
                     );

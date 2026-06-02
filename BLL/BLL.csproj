@@ -101,6 +101,7 @@
     <Compile Include="IServicioCalificacion.cs" />
     <Compile Include="IServicioCategoria.cs" />
     <Compile Include="IServicioPrecio.cs" />
+    <Compile Include="IServicioProducto.cs" />
     <Compile Include="ServicioCalificacion.cs" />
     <Compile Include="ServicioCategoria.cs" />
     <Compile Include="ServicioPrecio.cs" />

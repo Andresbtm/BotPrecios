@@ -24,9 +24,8 @@ namespace GUI
 
         private static TecladoBot _tecladoBot;
         private static HashSet<long> _esperandoIA = new HashSet<long>();
-        private static readonly string _geminiKey = ConfigurationManager.AppSettings["GroqApiKey"];
+        private static readonly string _groqApiKey = ConfigurationManager.AppSettings["GroqApiKey"];
         private static readonly HttpClient _httpClient = new HttpClient();
-        //private static HashSet<long> _esperandoIA = new HashSet<long>();
 
         static void Main(string[] args)
         {
@@ -35,11 +34,9 @@ namespace GUI
                 FabricaServicios.CrearServicioPrecio(),
                 FabricaServicios.CrearServicioCategoria()
             );
+
             string token = ConfigurationManager.AppSettings["TelegramToken"];
             _bot = new TelegramBotClient(token);
-
-            //string token = "8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74";
-            //_bot = new TelegramBotClient(token);
 
             var cts = new CancellationTokenSource();
 
@@ -85,7 +82,7 @@ namespace GUI
                         cancellationToken: ct
                     );
                 }
-                else if (_esperandoIA.Contains(chatId)) // lo vemos luego
+                else if (_esperandoIA.Contains(chatId))
                 {
                     await ProcesarConsultaIA(bot, chatId, texto, ct);
                 }
@@ -312,7 +309,7 @@ namespace GUI
                         parseMode: ParseMode.Markdown,
                         replyMarkup: new InlineKeyboardMarkup(new[]
                         {
-            new[] { InlineKeyboardButton.WithCallbackData("🔙 Volver al menú", "menu_nuevo") }
+                            new[] { InlineKeyboardButton.WithCallbackData("🔙 Volver al menú", "menu_nuevo") }
                         }),
                         cancellationToken: ct
                     );
@@ -379,8 +376,8 @@ Desinfectante, Papel Higiénico, Toallas de Cocina, Pasta Dental, Desodorante";
                     model = "llama-3.1-8b-instant",
                     messages = new[]
                     {
-        new { role = "user", content = prompt }
-    },
+                        new { role = "user", content = prompt }
+                    },
                     temperature = 0.3
                 };
 
@@ -388,7 +385,7 @@ Desinfectante, Papel Higiénico, Toallas de Cocina, Pasta Dental, Desodorante";
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
                 _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_geminiKey}");
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_groqApiKey}");
 
                 var url = "https://api.groq.com/openai/v1/chat/completions";
                 var response = await _httpClient.PostAsync(url, content);
@@ -473,8 +470,8 @@ Desinfectante, Papel Higiénico, Toallas de Cocina, Pasta Dental, Desodorante";
                     parseMode: ParseMode.Markdown,
                     replyMarkup: new InlineKeyboardMarkup(new[]
                     {
-                new[] { InlineKeyboardButton.WithCallbackData("🤖 Nueva consulta IA", "menu_ia") },
-                new[] { InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo") }
+                        new[] { InlineKeyboardButton.WithCallbackData("🤖 Nueva consulta IA", "menu_ia") },
+                        new[] { InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo") }
                     }),
                     cancellationToken: ct
                 );
@@ -488,6 +485,5 @@ Desinfectante, Papel Higiénico, Toallas de Cocina, Pasta Dental, Desodorante";
                 );
             }
         }
-
     }
 }

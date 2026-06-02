@@ -6,13 +6,13 @@ namespace GUI
 {
     public class TecladoBot
     {
-        private readonly ServicioProducto _servicioProducto;
-        private readonly ServicioPrecio _servicioPrecio;
-        private readonly ServicioCategoria _servicioCategoria;
+        private readonly IServicioProducto _servicioProducto;
+        private readonly IServicioPrecio _servicioPrecio;
+        private readonly IServicioCategoria _servicioCategoria;
 
-        public TecladoBot(ServicioProducto servicioProducto,
-                          ServicioPrecio servicioPrecio,
-                          ServicioCategoria servicioCategoria)
+        public TecladoBot(IServicioProducto servicioProducto,
+                          IServicioPrecio servicioPrecio,
+                          IServicioCategoria servicioCategoria)
         {
             _servicioProducto = servicioProducto;
             _servicioPrecio = servicioPrecio;
@@ -49,9 +49,9 @@ namespace GUI
                 }
             }
             filas.Add(new[]
-   {
-        InlineKeyboardButton.WithCallbackData("🤖 Asistente IA", "menu_ia")
-    });
+            {
+                InlineKeyboardButton.WithCallbackData("🤖 Asistente IA", "menu_ia")
+            });
 
             return new InlineKeyboardMarkup(filas);
         }
@@ -127,8 +127,4 @@ namespace GUI
             return new InlineKeyboardMarkup(filas);
         }
     }
-        
-
-
-
 }

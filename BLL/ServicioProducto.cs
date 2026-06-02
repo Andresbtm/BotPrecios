@@ -5,7 +5,7 @@ using System.Text;
 
 namespace BLL
 {
-    public class ServicioProducto
+    public class ServicioProducto : IServicioProducto
     {
         private readonly IRepositorioProducto _repositorio;
         private readonly IServicioPrecio _servicioPrecio;

@@ -18,18 +18,11 @@ namespace BLL
             IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
             IRepositorioCalificacion repoCalificacion = new RepositorioCalificacion(conexion);
             IRepositorioCategoria repoCategoria = new RepositorioCategoria(conexion);
-            IServicioPrecio servicioPrecio = new ServicioPrecio(repoPrecio, repoProducto); // ← agrega repoProducto
+            IServicioPrecio servicioPrecio = new ServicioPrecio(repoPrecio, repoProducto);
             IServicioCalificacion servicioCalificacion = new ServicioCalificacion(repoCalificacion);
             IServicioCategoria servicioCategoria = new ServicioCategoria(repoCategoria);
             return new ServicioProducto(repoProducto, servicioPrecio, servicioCalificacion, servicioCategoria);
         }
-
-        /*public static ServicioPrecio CrearServicioPrecio()
-        {
-            IConexion conexion = new Conexion();
-            IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
-            return new ServicioPrecio(repoPrecio);
-        }*/
 
         public static ServicioUsuario CrearServicioUsuario()
         {

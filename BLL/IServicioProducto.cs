@@ -12,5 +12,6 @@ namespace BLL
         string ObtenerCategoriaPorComando(string comando);
         List<Producto> ObtenerProductosPorCategoria(string categoria);
         Producto ObtenerProductoPorComando(string comando);
+        string ObtenerCategoriaPorId(int idProducto);
     }
 }

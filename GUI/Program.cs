@@ -230,6 +230,9 @@ namespace GUI
                     var idProducto = int.Parse(partes[1]);
                     var idSupermercado = int.Parse(partes[2]);
 
+                    var cat = _servicioProducto.ObtenerCategoriaPorId(idProducto);
+                    var info = _servicioProducto.ObtenerDatosCategoria(cat);
+
                     var teclado = new InlineKeyboardMarkup(new[]
                     {
                         new[]
@@ -242,6 +245,14 @@ namespace GUI
                         {
                             InlineKeyboardButton.WithCallbackData("⭐⭐⭐⭐ 4", $"puntaje_{idProducto}_{idSupermercado}_4"),
                             InlineKeyboardButton.WithCallbackData("⭐⭐⭐⭐⭐ 5", $"puntaje_{idProducto}_{idSupermercado}_5")
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData($"🔙 Volver a {info.titulo}", $"volver_prod_{cat}")
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
                         }
                     });
 
@@ -259,6 +270,21 @@ namespace GUI
                     var idProducto = int.Parse(partes[1]);
                     var idSupermercado = int.Parse(partes[2]);
                     var puntaje = int.Parse(partes[3]);
+
+                    var cat = _servicioProducto.ObtenerCategoriaPorId(idProducto);
+                    var info = _servicioProducto.ObtenerDatosCategoria(cat);
+
+                    var tecladoVolver = new InlineKeyboardMarkup(new[]
+                    {
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData($"🔙 Volver a {info.titulo}", $"volver_prod_{cat}")
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
+                        }
+                    });
 
                     var usuarioDb = _servicioUsuario.BuscarPorChat(chatId);
                     if (usuarioDb == null)
@@ -283,6 +309,7 @@ namespace GUI
                         await bot.SendMessage(
                             chatId: chatId,
                             text: $"✅ Calificación guardada: {new string('⭐', puntaje)}",
+                            replyMarkup: tecladoVolver,
                             cancellationToken: ct
                         );
                     }
@@ -291,6 +318,7 @@ namespace GUI
                         await bot.SendMessage(
                             chatId: chatId,
                             text: $"⚠️ {ex.Message}",
+                            replyMarkup: tecladoVolver,
                             cancellationToken: ct
                         );
                     }

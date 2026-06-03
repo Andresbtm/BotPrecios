@@ -93,6 +93,14 @@ namespace BLL
             return _servicioCategoria.ObtenerDatosCategoria(categoria);
         }
 
+        public string ObtenerCategoriaPorId(int idProducto)
+        {
+            var productos = _repositorio.ObtenerTodos();
+            var producto = productos.Find(p => p.Id == idProducto);
+            if (producto == null) return "granos";
+            return _servicioCategoria.ObtenerNombrePorId(producto.IdCategoria);
+        }
+
         public string ObtenerCategoriaPorComando(string comando)
         {
             var producto = _repositorio.ObtenerPorComando(comando);

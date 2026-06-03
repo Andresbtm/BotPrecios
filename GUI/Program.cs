@@ -72,7 +72,7 @@ namespace GUI
 
                 Console.WriteLine($"[{usuario}] {texto}");
 
-                if (texto == "/start")
+                if ( texto == "/precios" || texto == "/start")
                 {
                     await bot.SendMessage(
                         chatId: chatId,
@@ -90,7 +90,7 @@ namespace GUI
                 {
                     await bot.SendMessage(
                         chatId: chatId,
-                        text: "❓ Usa /start para comenzar.",
+                        text: "❓ Usa /start o /precios para comenzar.",
                         cancellationToken: ct
                     );
                 }
@@ -291,7 +291,7 @@ namespace GUI
                     {
                         await bot.SendMessage(
                             chatId: chatId,
-                            text: "❓ Usa /start primero.",
+                            text: "❓ Usa /start o /precios primero.",
                             cancellationToken: ct
                         );
                         return;

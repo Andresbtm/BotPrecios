@@ -27,6 +27,7 @@ namespace GUI
         private static readonly string _groqApiKey = ConfigurationManager.AppSettings["GroqApiKey"];
         private static readonly HttpClient _httpClient = new HttpClient();
 
+
         static void Main(string[] args)
         {
             _tecladoBot = new TecladoBot(
@@ -71,7 +72,7 @@ namespace GUI
                 );
 
                 Console.WriteLine($"[{usuario}] {texto}");
-
+              
                 if ( texto == "/precios" || texto == "/start")
                 {
                     await bot.SendMessage(
@@ -135,6 +136,7 @@ namespace GUI
                         cancellationToken: ct
                     );
                 }
+
                 // ── Producto (edita con info, envía nuevo con supermercado) ──
                 else if (data.StartsWith("prod_"))
                 {
@@ -144,6 +146,7 @@ namespace GUI
                     var infoProducto = _servicioProducto.ObtenerInfoProducto(comando);
                     var comparacion = _servicioProducto.ObtenerComparacionConCalificacion(comando);
                     var teclado = _tecladoBot.ObtenerInlineCalificar(comando, cat, info.titulo);
+
 
                     await bot.EditMessageText(
                         chatId: chatId,

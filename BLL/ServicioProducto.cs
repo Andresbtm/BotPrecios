@@ -77,7 +77,7 @@ namespace BLL
                 string estrellas = promedio > 0 ? $"⭐ {promedio}/5 ({votos} votos)" : "Sin calificaciones";
                 sb.AppendLine($"{icono} *{precios[i].NombreSupermercado}*: `${precios[i].Valor:N0}`");
                 if (!string.IsNullOrEmpty(precios[i].Fuente))
-                    sb.AppendLine($"   _{precios[i].Fuente}_");
+                    sb.AppendLine($"   {precios[i].Fuente}");
                 sb.AppendLine($"   {estrellas}");
             }
             sb.AppendLine($"\n_Actualizado: {precios[0].FechaRegistro:dd/MM/yyyy HH:mm}_");

@@ -48,6 +48,7 @@ BLL/FabricaServicios.cs
 BLL/IServicioCalificacion.cs
 BLL/IServicioCategoria.cs
 BLL/IServicioPrecio.cs
+BLL/IServicioProducto.cs
 BLL/packages.config
 BLL/Properties/AssemblyInfo.cs
 BLL/ServicioCalificacion.cs
@@ -530,67 +531,6 @@ MigrationBackup/
 FodyWeavers.xsd
 </file>
 
-<file path="BLL/FabricaServicios.cs">
-using DAL;
-
-namespace BLL
-{
-    public class FabricaServicios
-    {
-        public static ServicioCategoria CrearServicioCategoria()
-        {
-            IConexion conexion = new Conexion();
-            IRepositorioCategoria repoCategoria = new RepositorioCategoria(conexion);
-            return new ServicioCategoria(repoCategoria);
-        }
-
-        public static ServicioProducto CrearServicioProducto()
-        {
-            IConexion conexion = new Conexion();
-
-            IRepositorioProducto repoProducto = new RepositorioProducto(conexion);
-            IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
-            IRepositorioCalificacion repoCalificacion = new RepositorioCalificacion(conexion);
-            IRepositorioCategoria repoCategoria = new RepositorioCategoria(conexion);
-
-            IServicioPrecio servicioPrecio = new ServicioPrecio(repoPrecio);
-            IServicioCalificacion servicioCalificacion = new ServicioCalificacion(repoCalificacion);
-            IServicioCategoria servicioCategoria = new ServicioCategoria(repoCategoria);
-
-            return new ServicioProducto(repoProducto, servicioPrecio, servicioCalificacion, servicioCategoria);
-        }
-
-        public static ServicioPrecio CrearServicioPrecio()
-        {
-            IConexion conexion = new Conexion();
-            IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
-            return new ServicioPrecio(repoPrecio);
-        }
-
-        public static ServicioUsuario CrearServicioUsuario()
-        {
-            IConexion conexion = new Conexion();
-            IRepositorioUsuario repoUsuario = new RepositorioUsuario(conexion);
-            return new ServicioUsuario(repoUsuario);
-        }
-
-        public static ServicioCalificacion CrearServicioCalificacion()
-        {
-            IConexion conexion = new Conexion();
-            IRepositorioCalificacion repoCalificacion = new RepositorioCalificacion(conexion);
-            return new ServicioCalificacion(repoCalificacion);
-        }
-
-        public static ServicioSupermercado CrearServicioSupermercado()
-        {
-            IConexion conexion = new Conexion();
-            IRepositorioSupermercado repoSupermercado = new RepositorioSupermercado(conexion);
-            return new ServicioSupermercado(repoSupermercado);
-        }
-    }
-}
-</file>
-
 <file path="BLL/IServicioCalificacion.cs">
 namespace BLL
 {
@@ -599,24 +539,6 @@ namespace BLL
         void Insertar(int puntaje, int idProducto, int idSupermercado, int idUsuario);
         double ObtenerPromedio(int idProducto, int idSupermercado);
         int ObtenerTotalVotos(int idProducto, int idSupermercado);
-    }
-}
-</file>
-
-<file path="BLL/IServicioPrecio.cs">
-using ENTITY;
-using System.Collections.Generic;
-
-namespace BLL
-{
-    public interface IServicioPrecio
-    {
-        void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado);
-        List<PrecioDetalle> ObtenerPrecios(int idProducto);
-        decimal ObtenerPrecioMinimo(int idProducto);
-        decimal ObtenerPrecioMaximo(int idProducto);
-        decimal ObtenerPrecioPromedio(int idProducto);
-        string ObtenerSupermercadoMasBarato(int idProducto);
     }
 }
 </file>
@@ -1280,6 +1202,46 @@ namespace BLL
 }
 </file>
 
+<file path="BLL/IServicioPrecio.cs">
+using ENTITY;
+using System.Collections.Generic;
+
+namespace BLL
+{
+    public interface IServicioPrecio
+    {
+        void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado);
+        List<PrecioDetalle> ObtenerPrecios(int idProducto);
+        decimal ObtenerPrecioMinimo(int idProducto);
+        decimal ObtenerPrecioMaximo(int idProducto);
+        decimal ObtenerPrecioPromedio(int idProducto);
+        string ObtenerSupermercadoMasBarato(int idProducto);
+
+        PrecioDetalle ObtenerPrecioMinimoConSupermercado(string nombreProducto);
+    }
+}
+</file>
+
+<file path="BLL/IServicioProducto.cs">
+using ENTITY;
+using System.Collections.Generic;
+
+namespace BLL
+{
+    public interface IServicioProducto
+    {
+        string ObtenerMenuCategoria(string categoria, string emoji, string titulo);
+        string ObtenerInfoProducto(string comando);
+        string ObtenerComparacionConCalificacion(string comando);
+        (string emoji, string titulo) ObtenerDatosCategoria(string categoria);
+        string ObtenerCategoriaPorComando(string comando);
+        List<Producto> ObtenerProductosPorCategoria(string categoria);
+        Producto ObtenerProductoPorComando(string comando);
+        string ObtenerCategoriaPorId(int idProducto);
+    }
+}
+</file>
+
 <file path="BLL/ServicioCategoria.cs">
 using DAL;
 using ENTITY;
@@ -1589,135 +1551,6 @@ namespace ENTITY
 }
 </file>
 
-<file path="GUI/TecladoBot.cs">
-using BLL;
-using System.Collections.Generic;
-using Telegram.Bot.Types.ReplyMarkups;
-
-namespace GUI
-{
-    public class TecladoBot
-    {
-        private readonly ServicioProducto _servicioProducto;
-        private readonly ServicioPrecio _servicioPrecio;
-        private readonly ServicioCategoria _servicioCategoria;
-
-        public TecladoBot(ServicioProducto servicioProducto,
-                          ServicioPrecio servicioPrecio,
-                          ServicioCategoria servicioCategoria)
-        {
-            _servicioProducto = servicioProducto;
-            _servicioPrecio = servicioPrecio;
-            _servicioCategoria = servicioCategoria;
-        }
-
-        public InlineKeyboardMarkup ObtenerInlineCategorias()
-        {
-            var categorias = _servicioCategoria.ObtenerTodos();
-            var filas = new List<InlineKeyboardButton[]>();
-
-            for (int i = 0; i < categorias.Count; i += 2)
-            {
-                if (i + 1 < categorias.Count)
-                {
-                    filas.Add(new[]
-                    {
-                        InlineKeyboardButton.WithCallbackData(
-                            $"{categorias[i].Emoji} {categorias[i].Nombre}",
-                            $"cat_{categorias[i].Nombre.ToLower()}"),
-                        InlineKeyboardButton.WithCallbackData(
-                            $"{categorias[i+1].Emoji} {categorias[i+1].Nombre}",
-                            $"cat_{categorias[i+1].Nombre.ToLower()}")
-                    });
-                }
-                else
-                {
-                    filas.Add(new[]
-                    {
-                        InlineKeyboardButton.WithCallbackData(
-                            $"{categorias[i].Emoji} {categorias[i].Nombre}",
-                            $"cat_{categorias[i].Nombre.ToLower()}")
-                    });
-                }
-            }
-
-            return new InlineKeyboardMarkup(filas);
-        }
-
-        public InlineKeyboardMarkup ObtenerInlineProductos(string categoria)
-        {
-            var productos = _servicioProducto.ObtenerProductosPorCategoria(categoria);
-            var filas = new List<InlineKeyboardButton[]>();
-
-            for (int i = 0; i < productos.Count; i += 2)
-            {
-                if (i + 1 < productos.Count)
-                {
-                    filas.Add(new[]
-                    {
-                        InlineKeyboardButton.WithCallbackData(
-                            $"{productos[i].Emoji} {productos[i].Nombre}",
-                            $"prod_{productos[i].Comando.Replace("/", "")}"),
-                        InlineKeyboardButton.WithCallbackData(
-                            $"{productos[i+1].Emoji} {productos[i+1].Nombre}",
-                            $"prod_{productos[i+1].Comando.Replace("/", "")}")
-                    });
-                }
-                else
-                {
-                    filas.Add(new[]
-                    {
-                        InlineKeyboardButton.WithCallbackData(
-                            $"{productos[i].Emoji} {productos[i].Nombre}",
-                            $"prod_{productos[i].Comando.Replace("/", "")}")
-                    });
-                }
-            }
-
-            filas.Add(new[]
-            {
-                InlineKeyboardButton.WithCallbackData("🔙 Volver", "menu_principal")
-            });
-
-            return new InlineKeyboardMarkup(filas);
-        }
-
-        public InlineKeyboardMarkup ObtenerInlineCalificar(string comando,
-            string categoria, string tituloCategoria)
-        {
-            var producto = _servicioProducto.ObtenerProductoPorComando(comando);
-            if (producto == null) return null;
-
-            var precios = _servicioPrecio.ObtenerPrecios(producto.Id);
-            var filas = new List<InlineKeyboardButton[]>();
-
-            foreach (var p in precios)
-            {
-                filas.Add(new[]
-                {
-                    InlineKeyboardButton.WithCallbackData(
-                        $"🏪 {p.NombreSupermercado}",
-                        $"calif_{producto.Id}_{p.IdSupermercado}")
-                });
-            }
-
-            filas.Add(new[]
-            {
-                InlineKeyboardButton.WithCallbackData(
-                    $"🔙 Volver a {tituloCategoria}",
-                    $"volver_prod_{categoria}")
-            });
-            filas.Add(new[]
-            {
-                InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
-            });
-
-            return new InlineKeyboardMarkup(filas);
-        }
-    }
-}
-</file>
-
 <file path="BLL/app.config">
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -1756,6 +1589,65 @@ namespace GUI
 </configuration>
 </file>
 
+<file path="BLL/FabricaServicios.cs">
+using DAL;
+
+namespace BLL
+{
+    public class FabricaServicios
+    {
+        public static ServicioCategoria CrearServicioCategoria()
+        {
+            IConexion conexion = new Conexion();
+            IRepositorioCategoria repoCategoria = new RepositorioCategoria(conexion);
+            return new ServicioCategoria(repoCategoria);
+        }
+
+        public static ServicioProducto CrearServicioProducto()
+        {
+            IConexion conexion = new Conexion();
+            IRepositorioProducto repoProducto = new RepositorioProducto(conexion);
+            IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
+            IRepositorioCalificacion repoCalificacion = new RepositorioCalificacion(conexion);
+            IRepositorioCategoria repoCategoria = new RepositorioCategoria(conexion);
+            IServicioPrecio servicioPrecio = new ServicioPrecio(repoPrecio, repoProducto);
+            IServicioCalificacion servicioCalificacion = new ServicioCalificacion(repoCalificacion);
+            IServicioCategoria servicioCategoria = new ServicioCategoria(repoCategoria);
+            return new ServicioProducto(repoProducto, servicioPrecio, servicioCalificacion, servicioCategoria);
+        }
+
+        public static ServicioUsuario CrearServicioUsuario()
+        {
+            IConexion conexion = new Conexion();
+            IRepositorioUsuario repoUsuario = new RepositorioUsuario(conexion);
+            return new ServicioUsuario(repoUsuario);
+        }
+
+        public static ServicioCalificacion CrearServicioCalificacion()
+        {
+            IConexion conexion = new Conexion();
+            IRepositorioCalificacion repoCalificacion = new RepositorioCalificacion(conexion);
+            return new ServicioCalificacion(repoCalificacion);
+        }
+
+        public static ServicioSupermercado CrearServicioSupermercado()
+        {
+            IConexion conexion = new Conexion();
+            IRepositorioSupermercado repoSupermercado = new RepositorioSupermercado(conexion);
+            return new ServicioSupermercado(repoSupermercado);
+        }
+
+        public static ServicioPrecio CrearServicioPrecio()
+        {
+            IConexion conexion = new Conexion();
+            IRepositorioPrecio repoPrecio = new RepositorioPrecio(conexion);
+            IRepositorioProducto repoProducto = new RepositorioProducto(conexion);
+            return new ServicioPrecio(repoPrecio, repoProducto);
+        }
+    }
+}
+</file>
+
 <file path="BLL/ServicioUsuario.cs">
 using DAL;
 using ENTITY;
@@ -1782,54 +1674,6 @@ namespace BLL
         }
     }
 }
-</file>
-
-<file path="GUI/App.config">
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-    <startup> 
-        <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.8" />
-    </startup>
-  <runtime>
-    <assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
-      <dependentAssembly>
-        <assemblyIdentity name="System.Runtime.CompilerServices.Unsafe" publicKeyToken="b03f5f7f11d50a3a" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-6.0.0.0" newVersion="6.0.0.0" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Text.Json" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-8.0.0.5" newVersion="8.0.0.5" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Memory" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-4.0.1.2" newVersion="4.0.1.2" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Buffers" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-4.0.3.0" newVersion="4.0.3.0" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Threading.Tasks.Extensions" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-4.2.0.1" newVersion="4.2.0.1" />
-      </dependentAssembly>
-      <dependentAssembly>
-        <assemblyIdentity name="System.Formats.Asn1" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
-        <bindingRedirect oldVersion="0.0.0.0-8.0.0.1" newVersion="8.0.0.1" />
-      </dependentAssembly>
-    </assemblyBinding>
-  </runtime>
-
-	<connectionStrings>
-		<add name="OracleDB"
-			 connectionString="Data Source=localhost:1521/XEPDB1;User Id=carlos;Password=carlos123;"
-			 providerName="Oracle.ManagedDataAccess.Client"/>
-	</connectionStrings>
-
-	<appSettings>
-		<add key="TelegramToken" value="8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74"/>
-	</appSettings>
-	
-</configuration>
 </file>
 
 <file path="GUI/packages.config">
@@ -2264,50 +2108,185 @@ namespace ENTITY
 }
 </file>
 
-<file path="BLL/ServicioPrecio.cs">
-using DAL;
-using ENTITY;
+<file path="GUI/App.config">
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+    <startup> 
+        <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.8" />
+    </startup>
+  <runtime>
+    <assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
+      <dependentAssembly>
+        <assemblyIdentity name="System.Runtime.CompilerServices.Unsafe" publicKeyToken="b03f5f7f11d50a3a" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-6.0.0.0" newVersion="6.0.0.0" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Text.Json" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-8.0.0.5" newVersion="8.0.0.5" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Memory" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-4.0.1.2" newVersion="4.0.1.2" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Buffers" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-4.0.3.0" newVersion="4.0.3.0" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Threading.Tasks.Extensions" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-4.2.0.1" newVersion="4.2.0.1" />
+      </dependentAssembly>
+      <dependentAssembly>
+        <assemblyIdentity name="System.Formats.Asn1" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral" />
+        <bindingRedirect oldVersion="0.0.0.0-8.0.0.1" newVersion="8.0.0.1" />
+      </dependentAssembly>
+    </assemblyBinding>
+  </runtime>
+
+	<connectionStrings>
+		<add name="OracleDB"
+			 connectionString="Data Source=localhost:1521/XEPDB1;User Id=carlos;Password=carlos123;"
+			 providerName="Oracle.ManagedDataAccess.Client"/>
+	</connectionStrings>
+
+	
+	<appSettings>
+		<add key="TelegramToken" value="8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74"/>
+		<add key="GroqApiKey" value="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"/>
+	</appSettings>
+	
+	
+</configuration>
+</file>
+
+<file path="GUI/TecladoBot.cs">
+using BLL;
 using System.Collections.Generic;
+using Telegram.Bot.Types.ReplyMarkups;
 
-namespace BLL
+namespace GUI
 {
-    public class ServicioPrecio : IServicioPrecio
+    public class TecladoBot
     {
-        private readonly IRepositorioPrecio _repositorio;
+        private readonly IServicioProducto _servicioProducto;
+        private readonly IServicioPrecio _servicioPrecio;
+        private readonly IServicioCategoria _servicioCategoria;
 
-        public ServicioPrecio(IRepositorioPrecio repositorio)
+        public TecladoBot(IServicioProducto servicioProducto,
+                          IServicioPrecio servicioPrecio,
+                          IServicioCategoria servicioCategoria)
         {
-            _repositorio = repositorio;
+            _servicioProducto = servicioProducto;
+            _servicioPrecio = servicioPrecio;
+            _servicioCategoria = servicioCategoria;
         }
 
-        public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
+        public InlineKeyboardMarkup ObtenerInlineCategorias()
         {
-            _repositorio.Insertar(valor, fuente, idProducto, idSupermercado);
+            var categorias = _servicioCategoria.ObtenerTodos();
+            var filas = new List<InlineKeyboardButton[]>();
+
+            for (int i = 0; i < categorias.Count; i += 2)
+            {
+                if (i + 1 < categorias.Count)
+                {
+                    filas.Add(new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(
+                            $"{categorias[i].Emoji} {categorias[i].Nombre}",
+                            $"cat_{categorias[i].Nombre.ToLower()}"),
+                        InlineKeyboardButton.WithCallbackData(
+                            $"{categorias[i+1].Emoji} {categorias[i+1].Nombre}",
+                            $"cat_{categorias[i+1].Nombre.ToLower()}")
+                    });
+                }
+                else
+                {
+                    filas.Add(new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(
+                            $"{categorias[i].Emoji} {categorias[i].Nombre}",
+                            $"cat_{categorias[i].Nombre.ToLower()}")
+                    });
+                }
+            }
+            filas.Add(new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🤖 Asistente IA", "menu_ia")
+            });
+
+            return new InlineKeyboardMarkup(filas);
         }
 
-        public List<PrecioDetalle> ObtenerPrecios(int idProducto)
+        public InlineKeyboardMarkup ObtenerInlineProductos(string categoria)
         {
-            return _repositorio.ListarRecientesPorProducto(idProducto);
+            var productos = _servicioProducto.ObtenerProductosPorCategoria(categoria);
+            var filas = new List<InlineKeyboardButton[]>();
+
+            for (int i = 0; i < productos.Count; i += 2)
+            {
+                if (i + 1 < productos.Count)
+                {
+                    filas.Add(new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(
+                            $"{productos[i].Emoji} {productos[i].Nombre}",
+                            $"prod_{productos[i].Comando.Replace("/", "")}"),
+                        InlineKeyboardButton.WithCallbackData(
+                            $"{productos[i+1].Emoji} {productos[i+1].Nombre}",
+                            $"prod_{productos[i+1].Comando.Replace("/", "")}")
+                    });
+                }
+                else
+                {
+                    filas.Add(new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(
+                            $"{productos[i].Emoji} {productos[i].Nombre}",
+                            $"prod_{productos[i].Comando.Replace("/", "")}")
+                    });
+                }
+            }
+
+            filas.Add(new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🔙 Volver", "menu_principal")
+            });
+
+            return new InlineKeyboardMarkup(filas);
         }
 
-        public decimal ObtenerPrecioMinimo(int idProducto)
+        public InlineKeyboardMarkup ObtenerInlineCalificar(string comando,
+            string categoria, string tituloCategoria)
         {
-            return _repositorio.ObtenerPrecioMinimo(idProducto);
-        }
+            var producto = _servicioProducto.ObtenerProductoPorComando(comando);
+            if (producto == null) return null;
 
-        public decimal ObtenerPrecioMaximo(int idProducto)
-        {
-            return _repositorio.ObtenerPrecioMaximo(idProducto);
-        }
+            var precios = _servicioPrecio.ObtenerPrecios(producto.Id);
+            var filas = new List<InlineKeyboardButton[]>();
 
-        public decimal ObtenerPrecioPromedio(int idProducto)
-        {
-            return _repositorio.ObtenerPrecioPromedio(idProducto);
-        }
+            foreach (var p in precios)
+            {
+                filas.Add(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        $"🏪 {p.NombreSupermercado}",
+                        $"calif_{producto.Id}_{p.IdSupermercado}")
+                });
+            }
 
-        public string ObtenerSupermercadoMasBarato(int idProducto)
-        {
-            return _repositorio.ObtenerSupermercadoMasBarato(idProducto);
+            filas.Add(new[]
+            {
+                InlineKeyboardButton.WithCallbackData(
+                    $"🔙 Volver a {tituloCategoria}",
+                    $"volver_prod_{categoria}")
+            });
+            filas.Add(new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
+            });
+
+            return new InlineKeyboardMarkup(filas);
         }
     }
 }
@@ -2488,198 +2467,6 @@ namespace DAL
 
                     cmd.ExecuteNonQuery();
                     return Convert.ToInt32(cmd.Parameters["resultado"].Value.ToString());
-                }
-            }
-        }
-    }
-}
-</file>
-
-<file path="DAL/RepositorioPrecio.cs">
-using ENTITY;
-using Oracle.ManagedDataAccess.Client;
-using System;
-using System.Collections.Generic;
-using System.Data;
-
-namespace DAL
-{
-    public class RepositorioPrecio : IRepositorioPrecio
-    {
-        private readonly IConexion _conexion;
-
-        public RepositorioPrecio(IConexion conexion)
-        {
-            _conexion = conexion;
-        }
-
-        public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
-        {
-            using (OracleConnection con = _conexion.AbrirConexion())
-            {
-                using (OracleCommand cmd = new OracleCommand("PKG_PRECIO.PR_INSERTAR_PRECIO", con))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.Add(new OracleParameter("p_valor", OracleDbType.Decimal)
-                    {
-                        Value = valor
-                    });
-                    cmd.Parameters.Add(new OracleParameter("p_fuente", OracleDbType.Varchar2)
-                    {
-                        Value = fuente ?? "manual"
-                    });
-                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
-                    {
-                        Value = idProducto
-                    });
-                    cmd.Parameters.Add(new OracleParameter("p_id_supermercado", OracleDbType.Int32)
-                    {
-                        Value = idSupermercado
-                    });
-
-                    cmd.ExecuteNonQuery();
-                }
-            }
-        }
-
-        public List<PrecioDetalle> ListarRecientesPorProducto(int idProducto)
-        {
-            List<PrecioDetalle> lista = new List<PrecioDetalle>();
-
-            using (OracleConnection con = _conexion.AbrirConexion())
-            {
-                using (OracleCommand cmd = new OracleCommand("PKG_PRECIO.PR_LISTAR_RECIENTES_POR_PRODUCTO", con))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-
-                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
-                    {
-                        Value = idProducto
-                    });
-                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
-                    {
-                        Direction = ParameterDirection.Output
-                    });
-
-                    using (OracleDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            lista.Add(new PrecioDetalle
-                            {
-                                IdPrecio = Convert.ToInt32(reader["id_precio"]),
-                                Valor = Convert.ToDecimal(reader["valor"]),
-                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"]),
-                                Fuente = reader["fuente"] == DBNull.Value ? "" : reader["fuente"].ToString(),
-                                IdProducto = Convert.ToInt32(reader["id_producto"]),
-                                IdSupermercado = Convert.ToInt32(reader["id_supermercado"]),
-                                NombreSupermercado = reader["supermercado"].ToString()
-                            });
-                        }
-                    }
-                }
-            }
-
-            return lista;
-        }
-
-        public List<Precio> ObtenerTodos()
-        {
-            List<Precio> lista = new List<Precio>();
-
-            using (OracleConnection con = _conexion.AbrirConexion())
-            {
-                using (OracleCommand cmd = new OracleCommand("PKG_PRECIO.PR_LISTAR_TODOS", con))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
-                    {
-                        Direction = ParameterDirection.Output
-                    });
-
-                    using (OracleDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            lista.Add(new Precio
-                            {
-                                IdPrecio = Convert.ToInt32(reader["id_precio"]),
-                                Valor = Convert.ToDecimal(reader["valor"]),
-                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"]),
-                                Fuente = reader["fuente"] == DBNull.Value ? "" : reader["fuente"].ToString(),
-                                IdProducto = Convert.ToInt32(reader["id_producto"]),
-                                IdSupermercado = Convert.ToInt32(reader["id_supermercado"])
-                            });
-                        }
-                    }
-                }
-            }
-
-            return lista;
-        }
-
-        public decimal ObtenerPrecioMinimo(int idProducto)
-        {
-            return EjecutarFuncionDecimal(
-                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_MINIMO(:p_id_producto); END;",
-                idProducto);
-        }
-
-        public decimal ObtenerPrecioMaximo(int idProducto)
-        {
-            return EjecutarFuncionDecimal(
-                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_MAXIMO(:p_id_producto); END;",
-                idProducto);
-        }
-
-        public decimal ObtenerPrecioPromedio(int idProducto)
-        {
-            return EjecutarFuncionDecimal(
-                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_PROMEDIO(:p_id_producto); END;",
-                idProducto);
-        }
-
-        public string ObtenerSupermercadoMasBarato(int idProducto)
-        {
-            using (OracleConnection con = _conexion.AbrirConexion())
-            {
-                using (OracleCommand cmd = new OracleCommand(
-                    "BEGIN :resultado := PKG_PRECIO.FX_SUPERMERCADO_MAS_BARATO(:p_id_producto); END;", con))
-                {
-                    cmd.Parameters.Add(new OracleParameter("resultado", OracleDbType.Varchar2, 100)
-                    {
-                        Direction = ParameterDirection.Output
-                    });
-                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
-                    {
-                        Value = idProducto
-                    });
-
-                    cmd.ExecuteNonQuery();
-                    return cmd.Parameters["resultado"].Value.ToString();
-                }
-            }
-        }
-
-        // Método privado reutilizable para funciones que devuelven NUMBER
-        private decimal EjecutarFuncionDecimal(string sql, int idProducto)
-        {
-            using (OracleConnection con = _conexion.AbrirConexion())
-            {
-                using (OracleCommand cmd = new OracleCommand(sql, con))
-                {
-                    cmd.Parameters.Add(new OracleParameter("resultado", OracleDbType.Decimal)
-                    {
-                        Direction = ParameterDirection.Output
-                    });
-                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
-                    {
-                        Value = idProducto
-                    });
-
-                    cmd.ExecuteNonQuery();
-                    return Convert.ToDecimal(cmd.Parameters["resultado"].Value.ToString());
                 }
             }
         }
@@ -2940,6 +2727,271 @@ namespace DAL
 </Project>
 </file>
 
+<file path="BLL/ServicioPrecio.cs">
+using DAL;
+using ENTITY;
+using System.Collections.Generic;
+
+namespace BLL
+{
+    public class ServicioPrecio : IServicioPrecio
+    {
+        private readonly IRepositorioPrecio _repositorio;
+        private readonly IRepositorioProducto _repositorioProducto;
+
+        public ServicioPrecio(IRepositorioPrecio repositorio, IRepositorioProducto repositorioProducto)
+        {
+            _repositorio = repositorio;
+            _repositorioProducto = repositorioProducto;
+        }
+
+        public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
+        {
+            _repositorio.Insertar(valor, fuente, idProducto, idSupermercado);
+        }
+
+        public List<PrecioDetalle> ObtenerPrecios(int idProducto)
+        {
+            return _repositorio.ListarRecientesPorProducto(idProducto);
+        }
+
+        public decimal ObtenerPrecioMinimo(int idProducto)
+        {
+            return _repositorio.ObtenerPrecioMinimo(idProducto);
+        }
+
+        public decimal ObtenerPrecioMaximo(int idProducto)
+        {
+            return _repositorio.ObtenerPrecioMaximo(idProducto);
+        }
+
+        public decimal ObtenerPrecioPromedio(int idProducto)
+        {
+            return _repositorio.ObtenerPrecioPromedio(idProducto);
+        }
+
+        public string ObtenerSupermercadoMasBarato(int idProducto)
+        {
+            return _repositorio.ObtenerSupermercadoMasBarato(idProducto);
+        }
+
+        public PrecioDetalle ObtenerPrecioMinimoConSupermercado(string nombreProducto)
+        {
+            var producto = _repositorioProducto.ObtenerTodos()
+                .Find(p => p.Nombre.ToLower() == nombreProducto.ToLower());
+
+            if (producto == null) return null;
+
+            var valor = _repositorio.ObtenerPrecioMinimo(producto.Id);
+            var supermercado = _repositorio.ObtenerSupermercadoMasBarato(producto.Id);
+
+            return new PrecioDetalle
+            {
+                IdProducto = producto.Id,
+                Valor = valor,
+                NombreSupermercado = supermercado
+            };
+        }
+    }
+}
+</file>
+
+<file path="DAL/RepositorioPrecio.cs">
+using ENTITY;
+using Oracle.ManagedDataAccess.Client;
+using System;
+using System.Collections.Generic;
+using System.Data;
+
+namespace DAL
+{
+    public class RepositorioPrecio : IRepositorioPrecio
+    {
+        private readonly IConexion _conexion;
+
+        public RepositorioPrecio(IConexion conexion)
+        {
+            _conexion = conexion;
+        }
+
+        public void Insertar(decimal valor, string fuente, int idProducto, int idSupermercado)
+        {
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_PRECIO.PR_INSERTAR_PRECIO", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add(new OracleParameter("p_valor", OracleDbType.Decimal)
+                    {
+                        Value = valor
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_fuente", OracleDbType.Varchar2)
+                    {
+                        Value = fuente ?? "manual"
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
+                    {
+                        Value = idProducto
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_supermercado", OracleDbType.Int32)
+                    {
+                        Value = idSupermercado
+                    });
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public List<PrecioDetalle> ListarRecientesPorProducto(int idProducto)
+        {
+            List<PrecioDetalle> lista = new List<PrecioDetalle>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_PRECIO.PR_LISTAR_RECIENTES_POR_PRODUCTO", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
+                    {
+                        Value = idProducto
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(new PrecioDetalle
+                            {
+                                IdPrecio = Convert.ToInt32(reader["id_precio"]),
+                                Valor = Convert.ToDecimal(reader["valor"]),
+                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"]),
+                                Fuente = reader["fuente"] == DBNull.Value ? "" : reader["fuente"].ToString(),
+                                IdProducto = Convert.ToInt32(reader["id_producto"]),
+                                IdSupermercado = Convert.ToInt32(reader["id_supermercado"]),
+                                NombreSupermercado = reader["supermercado"].ToString()
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
+
+        public List<Precio> ObtenerTodos()
+        {
+            List<Precio> lista = new List<Precio>();
+
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand("PKG_PRECIO.PR_LISTAR_TODOS", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new OracleParameter("p_cursor", OracleDbType.RefCursor)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+
+                    using (OracleDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lista.Add(new Precio
+                            {
+                                IdPrecio = Convert.ToInt32(reader["id_precio"]),
+                                Valor = Convert.ToDecimal(reader["valor"]),
+                                FechaRegistro = Convert.ToDateTime(reader["fecha_registro"]),
+                                Fuente = reader["fuente"] == DBNull.Value ? "" : reader["fuente"].ToString(),
+                                IdProducto = Convert.ToInt32(reader["id_producto"]),
+                                IdSupermercado = Convert.ToInt32(reader["id_supermercado"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return lista;
+        }
+
+        public decimal ObtenerPrecioMinimo(int idProducto)
+        {
+            return EjecutarFuncionDecimal(
+                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_MINIMO(:p_id_producto); END;",
+                idProducto);
+        }
+
+        public decimal ObtenerPrecioMaximo(int idProducto)
+        {
+            return EjecutarFuncionDecimal(
+                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_MAXIMO(:p_id_producto); END;",
+                idProducto);
+        }
+
+        public decimal ObtenerPrecioPromedio(int idProducto)
+        {
+            return EjecutarFuncionDecimal(
+                "BEGIN :resultado := PKG_PRECIO.FX_PRECIO_PROMEDIO(:p_id_producto); END;",
+                idProducto);
+        }
+
+        public string ObtenerSupermercadoMasBarato(int idProducto)
+        {
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand(
+                    "BEGIN :resultado := PKG_PRECIO.FX_SUPERMERCADO_MAS_BARATO(:p_id_producto); END;", con))
+                {
+                    cmd.Parameters.Add(new OracleParameter("resultado", OracleDbType.Varchar2, 100)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
+                    {
+                        Value = idProducto
+                    });
+
+                    cmd.ExecuteNonQuery();
+                    return cmd.Parameters["resultado"].Value.ToString();
+                }
+            }
+        }
+
+        // Método privado reutilizable para funciones que devuelven NUMBER
+        private decimal EjecutarFuncionDecimal(string sql, int idProducto)
+        {
+            using (OracleConnection con = _conexion.AbrirConexion())
+            {
+                using (OracleCommand cmd = new OracleCommand(sql, con))
+                {
+                    cmd.Parameters.Add(new OracleParameter("resultado", OracleDbType.Decimal)
+                    {
+                        Direction = ParameterDirection.Output
+                    });
+                    cmd.Parameters.Add(new OracleParameter("p_id_producto", OracleDbType.Int32)
+                    {
+                        Value = idProducto
+                    });
+
+                    cmd.ExecuteNonQuery();
+
+                    // Usar InvariantCulture para evitar problemas de configuración regional
+                    string valorStr = cmd.Parameters["resultado"].Value.ToString()
+                                         .Replace(",", ".");
+                    return decimal.Parse(valorStr, System.Globalization.CultureInfo.InvariantCulture);
+                }
+            }
+        }
+    }
+}
+</file>
+
 <file path="ENTITY/ENTITY.csproj">
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -2995,122 +3047,6 @@ namespace DAL
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
-</file>
-
-<file path="BLL/ServicioProducto.cs">
-using DAL;
-using ENTITY;
-using System.Collections.Generic;
-using System.Text;
-
-namespace BLL
-{
-    public class ServicioProducto
-    {
-        private readonly IRepositorioProducto _repositorio;
-        private readonly IServicioPrecio _servicioPrecio;
-        private readonly IServicioCalificacion _servicioCalificacion;
-        private readonly IServicioCategoria _servicioCategoria;
-
-        public ServicioProducto(IRepositorioProducto repositorio,
-                                IServicioPrecio servicioPrecio,
-                                IServicioCalificacion servicioCalificacion,
-                                IServicioCategoria servicioCategoria)
-        {
-            _repositorio = repositorio;
-            _servicioPrecio = servicioPrecio;
-            _servicioCalificacion = servicioCalificacion;
-            _servicioCategoria = servicioCategoria;
-        }
-
-        // ── Menú de texto ────────────────────────────────────────────
-        public string ObtenerMenuCategoria(string categoria, string emoji, string titulo)
-        {
-            var productos = _repositorio.ObtenerPorCategoria(categoria);
-            var sb = new StringBuilder();
-            sb.AppendLine($"{emoji} *Categoría: {titulo}*\n");
-            sb.AppendLine("Selecciona un producto:");
-            foreach (var p in productos)
-                sb.AppendLine($"{p.Emoji} {p.Nombre}");
-            return sb.ToString();
-        }
-
-        public string ObtenerInfoProducto(string comando)
-        {
-            var producto = _repositorio.ObtenerPorComando(comando);
-            if (producto == null) return "Producto no encontrado.";
-
-            decimal minimo = _servicioPrecio.ObtenerPrecioMinimo(producto.Id);
-            decimal maximo = _servicioPrecio.ObtenerPrecioMaximo(producto.Id);
-            decimal promedio = _servicioPrecio.ObtenerPrecioPromedio(producto.Id);
-            string masBarato = _servicioPrecio.ObtenerSupermercadoMasBarato(producto.Id);
-
-            // Sin precios registrados
-            if (minimo == 0)
-            {
-                return $"{producto.Emoji} *{producto.Nombre}*\n" +
-                       $"Unidad: {producto.Unidad}\n\n" +
-                       $"⚠️ Aún no hay precios registrados para este producto.";
-            }
-
-            return $"{producto.Emoji} *{producto.Nombre}*\n" +
-                   $"Unidad: {producto.Unidad}\n\n" +
-                   $"💰 Más barato: *{masBarato}* — `${minimo:N0}`\n" +
-                   $"📈 Más caro: `${maximo:N0}`\n" +
-                   $"📊 Promedio: `${promedio:N0}`";
-        }
-
-        public string ObtenerComparacionConCalificacion(string comando)
-        {
-            var producto = _repositorio.ObtenerPorComando(comando);
-            if (producto == null) return "⚠️ Producto no encontrado.";
-
-            var precios = _servicioPrecio.ObtenerPrecios(producto.Id);
-            if (precios.Count == 0)
-                return "⚠️ No hay precios registrados para este producto.";
-
-            var sb = new StringBuilder();
-            sb.AppendLine("🏪 *Comparación de precios:*\n");
-
-            for (int i = 0; i < precios.Count; i++)
-            {
-                string icono = i == 0 ? "🟢" : "⚪";
-                double promedio = _servicioCalificacion.ObtenerPromedio(producto.Id, precios[i].IdSupermercado);
-                int votos = _servicioCalificacion.ObtenerTotalVotos(producto.Id, precios[i].IdSupermercado);
-                string estrellas = promedio > 0 ? $"⭐ {promedio}/5 ({votos} votos)" : "Sin calificaciones";
-
-                sb.AppendLine($"{icono} *{precios[i].NombreSupermercado}*: `${precios[i].Valor:N0}`");
-                sb.AppendLine($"   {estrellas}");
-            }
-
-            sb.AppendLine($"\n_Actualizado: {precios[0].FechaRegistro:dd/MM/yyyy HH:mm}_");
-            sb.AppendLine("\nToca un supermercado para calificar:");
-            return sb.ToString();
-        }
-
-        public (string emoji, string titulo) ObtenerDatosCategoria(string categoria)
-        {
-            return _servicioCategoria.ObtenerDatosCategoria(categoria);
-        }
-
-        public string ObtenerCategoriaPorComando(string comando)
-        {
-            var producto = _repositorio.ObtenerPorComando(comando);
-            if (producto == null) return "granos";
-            return _servicioCategoria.ObtenerNombrePorId(producto.IdCategoria);
-        }
-
-        public List<Producto> ObtenerProductosPorCategoria(string categoria)
-        {
-            return _repositorio.ObtenerPorCategoria(categoria);
-        }
-
-        public Producto ObtenerProductoPorComando(string comando)
-        {
-            return _repositorio.ObtenerPorComando(comando);
-        }
-    }
-}
 </file>
 
 <file path="DAL/DAL.csproj">
@@ -3235,6 +3171,130 @@ namespace BLL
 </Project>
 </file>
 
+<file path="BLL/ServicioProducto.cs">
+using DAL;
+using ENTITY;
+using System.Collections.Generic;
+using System.Text;
+
+namespace BLL
+{
+    public class ServicioProducto : IServicioProducto
+    {
+        private readonly IRepositorioProducto _repositorio;
+        private readonly IServicioPrecio _servicioPrecio;
+        private readonly IServicioCalificacion _servicioCalificacion;
+        private readonly IServicioCategoria _servicioCategoria;
+
+        public ServicioProducto(IRepositorioProducto repositorio,
+                                IServicioPrecio servicioPrecio,
+                                IServicioCalificacion servicioCalificacion,
+                                IServicioCategoria servicioCategoria)
+        {
+            _repositorio = repositorio;
+            _servicioPrecio = servicioPrecio;
+            _servicioCalificacion = servicioCalificacion;
+            _servicioCategoria = servicioCategoria;
+        }
+
+        // ── Menú de texto ────────────────────────────────────────────
+        public string ObtenerMenuCategoria(string categoria, string emoji, string titulo)
+        {
+            var productos = _repositorio.ObtenerPorCategoria(categoria);
+            var sb = new StringBuilder();
+            sb.AppendLine($"{emoji} *Categoría: {titulo}*\n");
+            sb.AppendLine("Selecciona un producto:");
+            foreach (var p in productos)
+                sb.AppendLine($"{p.Emoji} {p.Nombre}");
+            return sb.ToString();
+        }
+
+        public string ObtenerInfoProducto(string comando)
+        {
+            var producto = _repositorio.ObtenerPorComando(comando);
+            if (producto == null) return "Producto no encontrado.";
+
+            decimal minimo = _servicioPrecio.ObtenerPrecioMinimo(producto.Id);
+            decimal maximo = _servicioPrecio.ObtenerPrecioMaximo(producto.Id);
+            decimal promedio = _servicioPrecio.ObtenerPrecioPromedio(producto.Id);
+            string masBarato = _servicioPrecio.ObtenerSupermercadoMasBarato(producto.Id);
+
+            // Sin precios registrados
+            if (minimo == 0)
+            {
+                return $"{producto.Emoji} *{producto.Nombre}*\n" +
+                       $"Unidad: {producto.Unidad}\n\n" +
+                       $"⚠️ Aún no hay precios registrados para este producto.";
+            }
+
+            return $"{producto.Emoji} *{producto.Nombre}*\n" +
+                   $"Unidad: {producto.Unidad}\n\n" +
+                   $"💰 Más barato: *{masBarato}* — `${minimo:N0}`\n" +
+                   $"📈 Más caro: `${maximo:N0}`\n" +
+                   $"📊 Promedio: `${promedio:N0}`";
+        }
+
+        public string ObtenerComparacionConCalificacion(string comando)
+        {
+            var producto = _repositorio.ObtenerPorComando(comando);
+            if (producto == null) return "⚠️ Producto no encontrado.";
+
+            var precios = _servicioPrecio.ObtenerPrecios(producto.Id);
+            if (precios.Count == 0)
+                return "⚠️ No hay precios registrados para este producto.";
+
+            var sb = new StringBuilder();
+            sb.AppendLine("🏪 *Comparación de precios:*\n");
+
+            for (int i = 0; i < precios.Count; i++)
+            {
+                string icono = i == 0 ? "🟢" : "⚪";
+                double promedio = _servicioCalificacion.ObtenerPromedio(producto.Id, precios[i].IdSupermercado);
+                int votos = _servicioCalificacion.ObtenerTotalVotos(producto.Id, precios[i].IdSupermercado);
+                string estrellas = promedio > 0 ? $"⭐ {promedio}/5 ({votos} votos)" : "Sin calificaciones";
+
+                sb.AppendLine($"{icono} *{precios[i].NombreSupermercado}*: `${precios[i].Valor:N0}`");
+                sb.AppendLine($"   {estrellas}");
+            }
+
+            sb.AppendLine($"\n_Actualizado: {precios[0].FechaRegistro:dd/MM/yyyy HH:mm}_");
+            sb.AppendLine("\nToca un supermercado para calificar:");
+            return sb.ToString();
+        }
+
+        public (string emoji, string titulo) ObtenerDatosCategoria(string categoria)
+        {
+            return _servicioCategoria.ObtenerDatosCategoria(categoria);
+        }
+
+        public string ObtenerCategoriaPorId(int idProducto)
+        {
+            var productos = _repositorio.ObtenerTodos();
+            var producto = productos.Find(p => p.Id == idProducto);
+            if (producto == null) return "granos";
+            return _servicioCategoria.ObtenerNombrePorId(producto.IdCategoria);
+        }
+
+        public string ObtenerCategoriaPorComando(string comando)
+        {
+            var producto = _repositorio.ObtenerPorComando(comando);
+            if (producto == null) return "granos";
+            return _servicioCategoria.ObtenerNombrePorId(producto.IdCategoria);
+        }
+
+        public List<Producto> ObtenerProductosPorCategoria(string categoria)
+        {
+            return _repositorio.ObtenerPorCategoria(categoria);
+        }
+
+        public Producto ObtenerProductoPorComando(string comando)
+        {
+            return _repositorio.ObtenerPorComando(comando);
+        }
+    }
+}
+</file>
+
 <file path="BLL/BLL.csproj">
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -3339,6 +3399,7 @@ namespace BLL
     <Compile Include="IServicioCalificacion.cs" />
     <Compile Include="IServicioCategoria.cs" />
     <Compile Include="IServicioPrecio.cs" />
+    <Compile Include="IServicioProducto.cs" />
     <Compile Include="ServicioCalificacion.cs" />
     <Compile Include="ServicioCategoria.cs" />
     <Compile Include="ServicioPrecio.cs" />
@@ -3368,6 +3429,10 @@ namespace BLL
 <file path="GUI/Program.cs">
 using BLL;
 using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -3376,7 +3441,6 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using System.Configuration;
 
 namespace GUI
 {
@@ -3386,7 +3450,11 @@ namespace GUI
         private static ServicioProducto _servicioProducto = FabricaServicios.CrearServicioProducto();
         private static ServicioUsuario _servicioUsuario = FabricaServicios.CrearServicioUsuario();
         private static ServicioCalificacion _servicioCalificacion = FabricaServicios.CrearServicioCalificacion();
+
         private static TecladoBot _tecladoBot;
+        private static HashSet<long> _esperandoIA = new HashSet<long>();
+        private static readonly string _groqApiKey = ConfigurationManager.AppSettings["GroqApiKey"];
+        private static readonly HttpClient _httpClient = new HttpClient();
 
         static void Main(string[] args)
         {
@@ -3395,11 +3463,9 @@ namespace GUI
                 FabricaServicios.CrearServicioPrecio(),
                 FabricaServicios.CrearServicioCategoria()
             );
+
             string token = ConfigurationManager.AppSettings["TelegramToken"];
             _bot = new TelegramBotClient(token);
-
-            //string token = "8232490880:AAGsgiuCRF7M-OfB5qNkhXlhzXn4hp-5j74";
-            //_bot = new TelegramBotClient(token);
 
             var cts = new CancellationTokenSource();
 
@@ -3435,7 +3501,7 @@ namespace GUI
 
                 Console.WriteLine($"[{usuario}] {texto}");
 
-                if (texto == "/start")
+                if ( texto == "/precios" || texto == "/start")
                 {
                     await bot.SendMessage(
                         chatId: chatId,
@@ -3445,11 +3511,15 @@ namespace GUI
                         cancellationToken: ct
                     );
                 }
+                else if (_esperandoIA.Contains(chatId))
+                {
+                    await ProcesarConsultaIA(bot, chatId, texto, ct);
+                }
                 else
                 {
                     await bot.SendMessage(
                         chatId: chatId,
-                        text: "❓ Usa /start para comenzar.",
+                        text: "❓ Usa /start o /precios para comenzar.",
                         cancellationToken: ct
                     );
                 }
@@ -3557,6 +3627,7 @@ namespace GUI
                 // ── Menú principal desde categoría (edita el mensaje actual) ──
                 else if (data == "menu_principal")
                 {
+                    _esperandoIA.Remove(chatId);
                     try
                     {
                         await bot.EditMessageText(
@@ -3588,6 +3659,9 @@ namespace GUI
                     var idProducto = int.Parse(partes[1]);
                     var idSupermercado = int.Parse(partes[2]);
 
+                    var cat = _servicioProducto.ObtenerCategoriaPorId(idProducto);
+                    var info = _servicioProducto.ObtenerDatosCategoria(cat);
+
                     var teclado = new InlineKeyboardMarkup(new[]
                     {
                         new[]
@@ -3600,6 +3674,14 @@ namespace GUI
                         {
                             InlineKeyboardButton.WithCallbackData("⭐⭐⭐⭐ 4", $"puntaje_{idProducto}_{idSupermercado}_4"),
                             InlineKeyboardButton.WithCallbackData("⭐⭐⭐⭐⭐ 5", $"puntaje_{idProducto}_{idSupermercado}_5")
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData($"🔙 Volver a {info.titulo}", $"volver_prod_{cat}")
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
                         }
                     });
 
@@ -3618,12 +3700,27 @@ namespace GUI
                     var idSupermercado = int.Parse(partes[2]);
                     var puntaje = int.Parse(partes[3]);
 
+                    var cat = _servicioProducto.ObtenerCategoriaPorId(idProducto);
+                    var info = _servicioProducto.ObtenerDatosCategoria(cat);
+
+                    var tecladoVolver = new InlineKeyboardMarkup(new[]
+                    {
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData($"🔙 Volver a {info.titulo}", $"volver_prod_{cat}")
+                        },
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo")
+                        }
+                    });
+
                     var usuarioDb = _servicioUsuario.BuscarPorChat(chatId);
                     if (usuarioDb == null)
                     {
                         await bot.SendMessage(
                             chatId: chatId,
-                            text: "❓ Usa /start primero.",
+                            text: "❓ Usa /start o /precios primero.",
                             cancellationToken: ct
                         );
                         return;
@@ -3641,6 +3738,7 @@ namespace GUI
                         await bot.SendMessage(
                             chatId: chatId,
                             text: $"✅ Calificación guardada: {new string('⭐', puntaje)}",
+                            replyMarkup: tecladoVolver,
                             cancellationToken: ct
                         );
                     }
@@ -3649,9 +3747,29 @@ namespace GUI
                         await bot.SendMessage(
                             chatId: chatId,
                             text: $"⚠️ {ex.Message}",
+                            replyMarkup: tecladoVolver,
                             cancellationToken: ct
                         );
                     }
+                }
+
+                else if (data == "menu_ia")
+                {
+                    _esperandoIA.Add(chatId);
+                    await bot.SendMessage(
+                        chatId: chatId,
+                        text: "🤖 *Asistente IA de compras*\n\n" +
+                              "Puedes enviarme:\n" +
+                              "📋 Una *lista de productos* — te digo dónde comprar más barato.\n" +
+                              "🍽️ Una *receta* — te explico cómo hacerla y te doy los mejores precios.\n\n" +
+                              "✍️ Escribe tu consulta:",
+                        parseMode: ParseMode.Markdown,
+                        replyMarkup: new InlineKeyboardMarkup(new[]
+                        {
+                            new[] { InlineKeyboardButton.WithCallbackData("🔙 Volver al menú", "menu_nuevo") }
+                        }),
+                        cancellationToken: ct
+                    );
                 }
             }
         }
@@ -3664,6 +3782,165 @@ namespace GUI
                 Console.WriteLine($"Error: {ex.Message}");
 
             return Task.CompletedTask;
+        }
+
+        static async Task ProcesarConsultaIA(ITelegramBotClient bot, long chatId, string texto, CancellationToken ct)
+        {
+            _esperandoIA.Remove(chatId);
+
+            await bot.SendMessage(
+                chatId: chatId,
+                text: "⏳ Consultando con IA...",
+                cancellationToken: ct
+            );
+
+            try
+            {
+                var prompt = $@"El usuario escribió: ""{texto}""
+
+Analiza si es una RECETA o una LISTA DE PRODUCTOS.
+
+Responde SOLO en JSON con este formato exacto, sin texto extra, sin bloques de código:
+
+Si es receta:
+{{
+   ""tipo"": ""receta"",
+  ""nombre"": ""Nombre del plato"",
+  ""pasos"": [""Paso 1 detallado"", ""Paso 2 detallado"", ""Paso 3 detallado"", ""Paso 4 detallado"", ""Paso 5 detallado""],
+  ""ingredientes"": [""Arroz"", ""Pollo"", ""Aceite Vegetal""]
+}}
+
+Si es lista:
+{{
+  ""tipo"": ""lista"",
+  ""ingredientes"": [""Leche Entera"", ""Pasta"", ""Frijoles""]
+}}
+
+Reglas importantes:
+- Los pasos deben ser detallados y específicos para esta receta, mínimo 5 pasos, máximo 8.
+- Solo incluye en ingredientes los productos estrictamente necesarios para la receta. No agregues ingredientes genéricos como aceite, sal o pimienta a menos que la receta los requiera de forma esencial.
+- Los ingredientes deben coincidir exactamente con estos nombres disponibles:
+Arroz, Maíz, Frijoles, Lentejas, Pasta, Aceite Vegetal, Aceite de Maíz, Margarina, Mantequilla,
+Pollo, Res, Cerdo, Pescado, Mortadela, Leche Entera, Leche Deslactosada, Leche en Polvo,
+Yogur, Queso Costeño, Crema de Leche, Suero Costeño, Agua Botellada, Gaseosa, Jugo Natural,
+Jugo en Caja, Café Molido, Café Instantáneo, Chocolate en Polvo, Jabón de Baño, Shampoo,
+Jabón Líquido, Detergente en Polvo, Detergente Líquido, Suavizante de Ropa, Blanqueador,
+Desinfectante, Papel Higiénico, Toallas de Cocina, Pasta Dental, Desodorante";
+
+                // ── 1. Llamar a Groq ──────────────────────────────
+                var body = new
+                {
+                    model = "llama-3.1-8b-instant",
+                    messages = new[]
+                    {
+                        new { role = "user", content = prompt }
+                    },
+                    temperature = 0.3
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(body);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_groqApiKey}");
+
+                var url = "https://api.groq.com/openai/v1/chat/completions";
+                var response = await _httpClient.PostAsync(url, content);
+                var responseStr = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine("=== GROQ RESPONSE ===");
+                Console.WriteLine(responseStr);
+                Console.WriteLine("=====================");
+
+                // ── 2. Extraer texto de Groq ─────────────────────
+                string textoIA;
+                using (var doc = System.Text.Json.JsonDocument.Parse(responseStr))
+                {
+                    textoIA = doc.RootElement
+                        .GetProperty("choices")[0]
+                        .GetProperty("message")
+                        .GetProperty("content")
+                        .GetString();
+                }
+
+                // Limpiar posibles backticks
+                textoIA = textoIA.Trim().Replace("```json", "").Replace("```", "").Trim();
+
+                // ── Parsear JSON de Gemini ───────────────────────────
+                string tipo;
+                List<string> ingredientes;
+                string nombreReceta = null;
+                List<string> pasos = null;
+
+                using (var resultado = System.Text.Json.JsonDocument.Parse(textoIA))
+                {
+                    tipo = resultado.RootElement.GetProperty("tipo").GetString();
+                    ingredientes = resultado.RootElement.GetProperty("ingredientes")
+                        .EnumerateArray()
+                        .Select(e => e.GetString())
+                        .ToList();
+
+                    if (tipo == "receta")
+                    {
+                        nombreReceta = resultado.RootElement.GetProperty("nombre").GetString();
+                        pasos = resultado.RootElement.GetProperty("pasos")
+                            .EnumerateArray()
+                            .Select(e => e.GetString())
+                            .ToList();
+                    }
+                }
+
+                // ── Consultar Oracle ─────────────────────────────────
+                var servicioPrecio = FabricaServicios.CrearServicioPrecio();
+                var sb = new System.Text.StringBuilder();
+
+                if (tipo == "receta")
+                {
+                    sb.AppendLine($"🍽️ *{nombreReceta}*\n");
+                    sb.AppendLine("📝 *Preparación:*");
+                    for (int i = 0; i < pasos.Count; i++)
+                        sb.AppendLine($"{i + 1}. {pasos[i]}");
+                    sb.AppendLine();
+                }
+
+                sb.AppendLine("🛒 *Mejores precios disponibles:*\n");
+
+                foreach (var ingrediente in ingredientes)
+                {
+                    try
+                    {
+                        var detalle = servicioPrecio.ObtenerPrecioMinimoConSupermercado(ingrediente);
+                        if (detalle != null)
+                            sb.AppendLine($"• *{ingrediente}*: ${detalle.Valor:N0} en {detalle.NombreSupermercado}");
+                        else
+                            sb.AppendLine($"• *{ingrediente}*: sin precio registrado");
+                    }
+                    catch
+                    {
+                        sb.AppendLine($"• *{ingrediente}*: sin precio registrado");
+                    }
+                }
+
+                await bot.SendMessage(
+                    chatId: chatId,
+                    text: sb.ToString(),
+                    parseMode: ParseMode.Markdown,
+                    replyMarkup: new InlineKeyboardMarkup(new[]
+                    {
+                        new[] { InlineKeyboardButton.WithCallbackData("🤖 Nueva consulta IA", "menu_ia") },
+                        new[] { InlineKeyboardButton.WithCallbackData("🏠 Menú principal", "menu_nuevo") }
+                    }),
+                    cancellationToken: ct
+                );
+            }
+            catch (Exception ex)
+            {
+                await bot.SendMessage(
+                    chatId: chatId,
+                    text: $"⚠️ Error procesando tu consulta: {ex.Message}",
+                    cancellationToken: ct
+                );
+            }
         }
     }
 }

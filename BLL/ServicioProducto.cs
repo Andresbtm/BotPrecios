@@ -64,25 +64,22 @@ namespace BLL
         {
             var producto = _repositorio.ObtenerPorComando(comando);
             if (producto == null) return "⚠️ Producto no encontrado.";
-
             var precios = _servicioPrecio.ObtenerPrecios(producto.Id);
             if (precios.Count == 0)
                 return "⚠️ No hay precios registrados para este producto.";
-
             var sb = new StringBuilder();
             sb.AppendLine("🏪 *Comparación de precios:*\n");
-
             for (int i = 0; i < precios.Count; i++)
             {
                 string icono = i == 0 ? "🟢" : "⚪";
                 double promedio = _servicioCalificacion.ObtenerPromedio(producto.Id, precios[i].IdSupermercado);
                 int votos = _servicioCalificacion.ObtenerTotalVotos(producto.Id, precios[i].IdSupermercado);
                 string estrellas = promedio > 0 ? $"⭐ {promedio}/5 ({votos} votos)" : "Sin calificaciones";
-
                 sb.AppendLine($"{icono} *{precios[i].NombreSupermercado}*: `${precios[i].Valor:N0}`");
+                if (!string.IsNullOrEmpty(precios[i].Fuente))
+                    sb.AppendLine($"   _{precios[i].Fuente}_");
                 sb.AppendLine($"   {estrellas}");
             }
-
             sb.AppendLine($"\n_Actualizado: {precios[0].FechaRegistro:dd/MM/yyyy HH:mm}_");
             sb.AppendLine("\nToca un supermercado para calificar:");
             return sb.ToString();

@@ -485,7 +485,12 @@ Desinfectante, Papel Higiénico, Toallas de Cocina, Pasta Dental, Desodorante";
                     {
                         var detalle = servicioPrecio.ObtenerPrecioMinimoConSupermercado(ingrediente);
                         if (detalle != null)
-                            sb.AppendLine($"• *{ingrediente}*: ${detalle.Valor:N0} en {detalle.NombreSupermercado}");
+                        {
+                            string descripcion = !string.IsNullOrEmpty(detalle.Fuente) && !detalle.Fuente.StartsWith("http")
+                                ? $"\n   {detalle.Fuente}"
+                                : "";
+                            sb.AppendLine($"• *{ingrediente}*: ${detalle.Valor:N0} en {detalle.NombreSupermercado}{descripcion}");
+                        }
                         else
                             sb.AppendLine($"• *{ingrediente}*: sin precio registrado");
                     }

@@ -75,9 +75,10 @@ namespace BLL
                 double promedio = _servicioCalificacion.ObtenerPromedio(producto.Id, precios[i].IdSupermercado);
                 int votos = _servicioCalificacion.ObtenerTotalVotos(producto.Id, precios[i].IdSupermercado);
                 string estrellas = promedio > 0 ? $"⭐ {promedio}/5 ({votos} votos)" : "Sin calificaciones";
+                var fuente = precios[i].Fuente;
                 sb.AppendLine($"{icono} *{precios[i].NombreSupermercado}*: `${precios[i].Valor:N0}`");
-                if (!string.IsNullOrEmpty(precios[i].Fuente))
-                    sb.AppendLine($"   {precios[i].Fuente}");
+                if (!string.IsNullOrEmpty(fuente))
+                    sb.AppendLine($"   {EscaparMarkdown(fuente)}");
                 sb.AppendLine($"   {estrellas}");
             }
             sb.AppendLine($"\n_Actualizado: {precios[0].FechaRegistro:dd/MM/yyyy HH:mm}_");
@@ -113,6 +114,16 @@ namespace BLL
         public Producto ObtenerProductoPorComando(string comando)
         {
             return _repositorio.ObtenerPorComando(comando);
+        }
+
+        private string EscaparMarkdown(string texto)
+        {
+            if (string.IsNullOrEmpty(texto)) return texto;
+            return texto
+                .Replace("_", "\\_")
+                .Replace("*", "\\*")
+                .Replace("`", "\\`")
+                .Replace("[", "\\[");
         }
     }
 }
